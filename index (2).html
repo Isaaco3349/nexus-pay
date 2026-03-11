@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Nexus Pay — Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #080b10; --surface: #0e1520; --border: #1c2a3a;
+      --accent: #00e5ff; --green: #00ffb2; --red: #ff4d6d;
+      --yellow: #ffd166; --text: #e8f0fe; --muted: #5a7a9a; --tempo: #635bff;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; min-height: 100vh; }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background-image: linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+      background-size: 48px 48px; pointer-events: none; z-index: 0;
+    }
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 32px; background: rgba(8,11,16,0.9); backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+    .logo { font-family: 'Space Mono', monospace; font-size: 16px; font-weight: 700; }
+    .logo span { color: var(--accent); }
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+    .wallet-btn {
+      font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase; padding: 10px 20px;
+      border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; transition: all 0.2s;
+    }
+    .wallet-btn:hover { background: var(--accent); color: #000; }
+    .wallet-btn.connected { background: var(--accent); color: #000; }
+    .wallet-addr { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--green); display: none; }
+    .create-btn {
+      font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase; padding: 10px 20px;
+      background: var(--accent); color: #000; border: none; cursor: pointer; transition: all 0.2s;
+    }
+    .create-btn:hover { background: #fff; }
+    main { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2px; margin-bottom: 40px; }
+    .stat { background: var(--surface); border: 1px solid var(--border); padding: 28px 24px; }
+    .stat-label { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; }
+    .stat-value { font-size: 32px; font-weight: 800; letter-spacing: -1.5px; }
+    .stat-value.green { color: var(--green); }
+    .stat-value.accent { color: var(--accent); }
+    .stat-value.tempo { color: var(--tempo); font-size: 16px; margin-top: 8px; }
+    .header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .section-title { font-size: 22px; font-weight: 800; letter-spacing: -1px; }
+    .invoices { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 2px; }
+    .invoice-card { background: var(--surface); border: 1px solid var(--border); padding: 24px; transition: border-color 0.2s; }
+    .invoice-card:hover { border-color: var(--accent); }
+    .card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+    .status-badge { font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; padding: 4px 10px; border: 1px solid; }
+    .status-badge.pending { color: var(--yellow); border-color: var(--yellow); background: rgba(255,209,102,0.08); }
+    .status-badge.paid { color: var(--green); border-color: var(--green); background: rgba(0,255,178,0.08); }
+    .card-date { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); }
+    .card-amount { font-size: 32px; font-weight: 800; letter-spacing: -1.5px; margin-bottom: 4px; }
+    .card-desc { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+    .card-actions { display: flex; gap: 8px; }
+    .btn-copy, .btn-view { font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; padding: 8px 16px; cursor: pointer; transition: all 0.2s; border: 1px solid; }
+    .btn-copy { background: transparent; color: var(--muted); border-color: var(--border); }
+    .btn-copy:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-view { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
+    .btn-view:hover { background: #fff; border-color: #fff; }
+    .tx-hash { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--tempo); margin-top: 8px; word-break: break-all; }
+    .empty { grid-column: 1/-1; text-align: center; padding: 80px 24px; border: 1px dashed var(--border); }
+    .empty-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; color: var(--muted); }
+    .empty-sub { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--muted); }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(8,11,16,0.95); z-index: 200; align-items: center; justify-content: center; padding: 24px; }
+    .modal-overlay.show { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border); width: 100%; max-width: 480px; padding: 36px; }
+    .modal-title { font-size: 22px; font-weight: 800; letter-spacing: -1px; margin-bottom: 28px; display: flex; justify-content: space-between; align-items: center; }
+    .modal-close { background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer; }
+    .modal-close:hover { color: var(--text); }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+    input { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: 'Space Mono', monospace; font-size: 13px; padding: 12px 16px; outline: none; transition: border-color 0.2s; }
+    input:focus { border-color: var(--accent); }
+    .amount-row { display: flex; }
+    .currency-tag { background: var(--border); border: 1px solid var(--border); border-left: none; padding: 12px 16px; font-family: 'Space Mono', monospace; font-size: 11px; color: var(--accent); white-space: nowrap; }
+    .submit-btn { width: 100%; background: var(--accent); color: #000; font-family: 'Space Mono', monospace; font-weight: 700; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; padding: 16px; border: none; cursor: pointer; margin-top: 8px; transition: all 0.2s; }
+    .submit-btn:hover { background: #fff; }
+    .toast { position: fixed; bottom: 32px; right: 32px; z-index: 300; background: var(--surface); border: 1px solid var(--green); color: var(--green); font-family: 'Space Mono', monospace; font-size: 12px; letter-spacing: 1px; padding: 14px 24px; transform: translateY(100px); opacity: 0; transition: all 0.3s; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.error { border-color: var(--red); color: var(--red); }
+  </style>
+</head>
+<body>
+<nav>
+  <div class="logo">NEXUS<span>.</span>PAY</div>
+  <div class="nav-right">
+    <div class="wallet-addr" id="wallet-addr"></div>
+    <button class="wallet-btn" id="wallet-btn" onclick="connectWallet()">Connect Wallet</button>
+    <button class="create-btn" onclick="openModal()">+ Create Link</button>
+  </div>
+</nav>
+<main>
+  <div class="stats">
+    <div class="stat"><div class="stat-label">// Total Collected</div><div class="stat-value green" id="total-collected">$0.00</div></div>
+    <div class="stat"><div class="stat-label">// Active Links</div><div class="stat-value accent" id="active-links">0</div></div>
+    <div class="stat"><div class="stat-label">// Paid Invoices</div><div class="stat-value" id="paid-count">0</div></div>
+    <div class="stat"><div class="stat-label">// Network</div><div class="stat-value tempo">Tempo Testnet ●</div></div>
+  </div>
+  <div class="header-row">
+    <div class="section-title">Your Payment Links</div>
+  </div>
+  <div class="invoices" id="invoices-grid"></div>
+</main>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-title">New Payment Link <button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="form-group"><label>Your Name / Business</label><input type="text" id="merchant-name" placeholder="e.g. Alex Rivera"/></div>
+    <div class="form-group"><label>Description</label><input type="text" id="invoice-desc" placeholder="e.g. Brand Design — Q1 2026"/></div>
+    <div class="form-group">
+      <label>Amount (USDC)</label>
+      <div class="amount-row"><input type="number" id="invoice-amount" placeholder="500" style="border-right:none;"/><div class="currency-tag">USDC</div></div>
+    </div>
+    <div class="form-group"><label>Your Wallet Address</label><input type="text" id="merchant-wallet" placeholder="0x..."/></div>
+    <button class="submit-btn" onclick="createInvoice()">→ Generate Payment Link</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+  const TEMPO_CHAIN = {
+    chainId: '0xA5AD', // 42429 in hex
+    chainName: 'Tempo Testnet',
+    nativeCurrency: { name: 'USD', symbol: 'USD', decimals: 18 },
+    rpcUrls: ['https://rpc.moderato.tempo.xyz'],
+    blockExplorerUrls: ['https://explorer.moderato.tempo.xyz']
+  };
+
+  let invoices = JSON.parse(localStorage.getItem('nexuspay_invoices') || '[]');
+  let connectedWallet = null;
+
+  async function connectWallet() {
+    if (!window.ethereum) { showToast('Please install MetaMask!', true); return; }
+    try {
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      connectedWallet = accounts[0];
+      try {
+        await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [TEMPO_CHAIN] });
+        await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: TEMPO_CHAIN.chainId }] });
+      } catch(e) { console.log('Chain:', e.message); }
+      document.getElementById('wallet-btn').textContent = 'Connected';
+      document.getElementById('wallet-btn').classList.add('connected');
+      const addrEl = document.getElementById('wallet-addr');
+      addrEl.style.display = 'block';
+      addrEl.textContent = connectedWallet.slice(0,6) + '...' + connectedWallet.slice(-4);
+      document.getElementById('merchant-wallet').value = connectedWallet;
+      showToast('✓ Connected to Tempo Testnet!');
+    } catch(e) { showToast('Failed: ' + e.message, true); }
+  }
+
+  function createInvoice() {
+    const name = document.getElementById('merchant-name').value.trim();
+    const desc = document.getElementById('invoice-desc').value.trim();
+    const amount = document.getElementById('invoice-amount').value.trim();
+    const wallet = document.getElementById('merchant-wallet').value.trim();
+    if (!name || !desc || !amount || !wallet) { showToast('Fill all fields!', true); return; }
+    const id = Math.random().toString(36).slice(2, 10).toUpperCase();
+    invoices.unshift({ id, name, desc, amount, wallet, status: 'pending', date: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}), txHash: null });
+    saveAndRender(); closeModal(); showToast('Payment link created!');
+    ['merchant-name','invoice-desc','invoice-amount','merchant-wallet'].forEach(i => document.getElementById(i).value = '');
+  }
+
+  function renderInvoices() {
+    const grid = document.getElementById('invoices-grid');
+    if (!invoices.length) {
+      grid.innerHTML = `<div class="empty"><div class="empty-title">No invoices yet</div><div class="empty-sub">// Create your first payment link above</div></div>`;
+      return;
+    }
+    grid.innerHTML = invoices.map(inv => `
+      <div class="invoice-card">
+        <div class="card-top"><span class="status-badge ${inv.status}">${inv.status}</span><span class="card-date">${inv.date}</span></div>
+        <div class="card-amount">$${parseFloat(inv.amount).toFixed(2)}</div>
+        <div class="card-desc">${inv.desc} · ${inv.name}</div>
+        ${inv.txHash ? `<div class="tx-hash">tx: ${inv.txHash}</div>` : ''}
+        <div class="card-actions">
+          <button class="btn-copy" onclick="copyLink('${inv.id}')">Copy Link</button>
+          <button class="btn-view" onclick="window.open('pay.html?id=${inv.id}','_blank')">Pay Page ↗</button>
+        </div>
+      </div>`).join('');
+    const paid = invoices.filter(i => i.status === 'paid');
+    document.getElementById('total-collected').textContent = '$' + paid.reduce((s,i) => s + parseFloat(i.amount), 0).toFixed(2);
+    document.getElementById('active-links').textContent = invoices.filter(i => i.status === 'pending').length;
+    document.getElementById('paid-count').textContent = paid.length;
+  }
+
+  function saveAndRender() { localStorage.setItem('nexuspay_invoices', JSON.stringify(invoices)); renderInvoices(); }
+  function copyLink(id) { navigator.clipboard.writeText(`${location.origin}/pay.html?id=${id}`).then(() => showToast('Link copied!')); }
+  function openModal() { document.getElementById('modal').classList.add('show'); }
+  function closeModal() { document.getElementById('modal').classList.remove('show'); }
+  function showToast(msg, error=false) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.className = 'toast show' + (error ? ' error' : '');
+    setTimeout(() => t.className = 'toast', 3000);
+  }
+
+  // Handle return from pay page
+  const p = new URLSearchParams(window.location.search);
+  if (p.get('paid')) {
+    const inv = invoices.find(i => i.id === p.get('paid'));
+    if (inv) { inv.status = 'paid'; inv.txHash = p.get('tx') || 'confirmed'; saveAndRender(); showToast('✓ Payment confirmed on Tempo!'); }
+    history.replaceState({}, '', location.pathname);
+  }
+
+  renderInvoices();
+</script>
+</body>
+</html>
