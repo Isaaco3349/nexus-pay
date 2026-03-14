@@ -164,8 +164,9 @@
       const signer = await provider.getSigner();
       const amountWei = ethers.parseEther('0.001');
       const tx = await signer.sendTransaction({
-        to: invoice.wallet,
-        value: amountWei
+  to: invoice.wallet,
+  value: amountWei,
+  gasLimit: 21000
       });
       setStatus('Transaction sent! Waiting for confirmation...', 'loading');
       await tx.wait();
