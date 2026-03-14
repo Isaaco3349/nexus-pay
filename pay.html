@@ -149,7 +149,7 @@
         await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: TEMPO_CHAIN.chainId }] });
       } catch(e) { console.log('Chain switch:', e.message); }
       document.getElementById('wallet-connected').style.display = 'block';
-      document.getElementById('wallet-connected').textContent = '&#10003; ' + connectedWallet.slice(0,6) + '...' + connectedWallet.slice(-4) + ' connected on Tempo';
+      document.getElementById('wallet-connected').innerHTML = '&#10003; ' + connectedWallet.slice(0,6) + '...' + connectedWallet.slice(-4) + ' connected on Tempo'; + connectedWallet.slice(0,6) + '...' + connectedWallet.slice(-4) + ' connected on Tempo';
       document.getElementById('connect-btn').style.display = 'none';
       document.getElementById('pay-btn').style.display = 'block';
       setStatus('Ready to pay on Tempo Testnet', 'success');
