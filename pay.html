@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Nexus Pay — Payment</title>
+  <title>Nexus Pay — Pay Invoice</title>
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
   <style>
@@ -14,38 +14,26 @@
       --yellow: #ffd166; --text: #e8f0fe; --muted: #5a7a9a; --tempo: #635bff;
     }
     body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
-    body::before {
-      content: ''; position: fixed; inset: 0;
-      background-image: linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
-      background-size: 48px 48px; pointer-events: none; z-index: 0;
-    }
+    body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px); background-size: 48px 48px; pointer-events: none; z-index: 0; }
     .card { position: relative; z-index: 1; background: var(--surface); border: 1px solid var(--border); width: 100%; max-width: 480px; padding: 40px; }
-    .powered-by { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 32px; display: flex; align-items: center; gap: 8px; }
+    .powered-by { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 32px; display: flex; align-items: center; justify-content: space-between; }
     .powered-by span { color: var(--accent); }
+    .tempo-badge { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--tempo); border: 1px solid var(--tempo); padding: 3px 8px; letter-spacing: 1px; display: flex; align-items: center; gap: 4px; }
+    .tempo-dot-sm { width: 5px; height: 5px; border-radius: 50%; background: var(--tempo); animation: pulse 2s infinite; }
     .invoice-amount { font-size: 56px; font-weight: 800; letter-spacing: -3px; line-height: 1; margin-bottom: 4px; }
     .invoice-currency { font-family: 'Space Mono', monospace; font-size: 14px; color: var(--accent); letter-spacing: 2px; margin-bottom: 8px; }
     .invoice-desc { font-size: 15px; color: var(--muted); margin-bottom: 4px; }
     .invoice-from { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); margin-bottom: 32px; }
     .divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
-    .chain-label { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; }
-    .chains { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
-    .chain-opt { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: 1px solid var(--border); background: var(--bg); cursor: pointer; transition: all 0.15s; font-family: 'Space Mono', monospace; font-size: 12px; }
-    .chain-opt:hover, .chain-opt.active { border-color: var(--accent); background: rgba(0,229,255,0.04); }
-    .chain-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .chain-dot.tempo { background: var(--tempo); }
-    .chain-dot.base { background: #0052ff; }
-    .chain-dot.solana { background: #9945ff; }
-    .chain-dot.sui { background: #4da2ff; }
-    .chain-dot.arc { background: var(--accent); }
-    .chain-name { flex: 1; color: var(--text); }
-    .chain-tag { font-size: 9px; color: var(--muted); letter-spacing: 1px; }
-    .connect-btn, .pay-btn {
-      width: 100%; font-family: 'Space Mono', monospace; font-weight: 700; font-size: 12px;
-      letter-spacing: 2px; text-transform: uppercase; padding: 16px; border: none; cursor: pointer; transition: all 0.2s;
-    }
-    .connect-btn { background: transparent; color: var(--accent); border: 1px solid var(--accent); margin-bottom: 8px; }
+    .tempo-rail { display: flex; align-items: center; gap: 12px; padding: 16px; border: 1px solid var(--tempo); background: rgba(99,91,255,0.08); margin-bottom: 24px; }
+    .tempo-rail-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--tempo); flex-shrink: 0; animation: pulse 2s infinite; }
+    .tempo-rail-info { flex: 1; }
+    .tempo-rail-name { font-family: 'Space Mono', monospace; font-size: 13px; color: var(--text); font-weight: 700; margin-bottom: 2px; }
+    .tempo-rail-tag { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--muted); letter-spacing: 1px; }
+    .tempo-rail-check { font-size: 16px; color: var(--tempo); }
+    .connect-btn { width: 100%; font-family: 'Space Mono', monospace; font-weight: 700; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; padding: 16px; border: none; cursor: pointer; transition: all 0.2s; background: transparent; color: var(--accent); border: 1px solid var(--accent); margin-bottom: 8px; }
     .connect-btn:hover { background: var(--accent); color: #000; }
-    .pay-btn { background: var(--green); color: #000; display: none; }
+    .pay-btn { width: 100%; font-family: 'Space Mono', monospace; font-weight: 700; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; padding: 16px; border: none; cursor: pointer; transition: all 0.2s; background: var(--green); color: #000; display: none; clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px)); }
     .pay-btn:hover { background: #fff; }
     .pay-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     .wallet-connected { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--green); text-align: center; margin-bottom: 12px; display: none; }
@@ -53,28 +41,28 @@
     .status-msg.success { color: var(--green); }
     .status-msg.error { color: var(--red); }
     .status-msg.loading { color: var(--yellow); }
-
-    /* SUCCESS */
-    .success-screen { display: none; text-align: center; }
-    .success-screen.show { display: block; }
-    .card.success-card { border-color: var(--green); }
-    .success-icon { font-size: 48px; margin-bottom: 16px; }
-    .success-title { font-size: 40px; font-weight: 800; color: var(--green); letter-spacing: -2px; margin-bottom: 8px; }
-    .success-sub { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--muted); margin-bottom: 24px; }
-    .tx-link { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--tempo); word-break: break-all; padding: 12px; border: 1px solid var(--border); margin-bottom: 24px; }
-    .back-btn { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); background: transparent; border: 1px solid var(--border); padding: 10px 24px; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; }
+    .success-card { display: none; text-align: center; }
+    .success-card.show { display: block; }
+    .success-card.show.card { border-color: var(--green); }
+    .s-icon { font-size: 48px; margin-bottom: 16px; }
+    .s-title { font-size: 40px; font-weight: 800; color: var(--green); letter-spacing: -2px; margin-bottom: 8px; }
+    .s-sub { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--muted); margin-bottom: 24px; }
+    .tx-link { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--tempo); word-break: break-all; padding: 12px; border: 1px solid var(--border); margin-bottom: 24px; cursor: pointer; }
+    .back-btn { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); background: transparent; border: 1px solid var(--border); padding: 10px 24px; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; text-decoration: none; display: inline-block; }
     .back-btn:hover { border-color: var(--accent); color: var(--accent); }
-
     .not-found { text-align: center; }
-    .not-found-title { font-size: 32px; font-weight: 800; color: var(--red); margin-bottom: 8px; }
-    .not-found-sub { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--muted); }
+    .nf-title { font-size: 32px; font-weight: 800; color: var(--red); margin-bottom: 8px; }
+    .nf-sub { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--muted); }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
   </style>
 </head>
 <body>
 
-<!-- PAYMENT CARD -->
 <div class="card" id="pay-card">
-  <div class="powered-by">Powered by <span>NEXUS.PAY</span> · Tempo Testnet</div>
+  <div class="powered-by">
+    <span>NEXUS.PAY</span>
+    <div class="tempo-badge"><div class="tempo-dot-sm"></div>TEMPO TESTNET</div>
+  </div>
 
   <div id="invoice-view">
     <div class="invoice-amount" id="pay-amount">—</div>
@@ -82,85 +70,72 @@
     <div class="invoice-desc" id="pay-desc">—</div>
     <div class="invoice-from" id="pay-from">—</div>
     <hr class="divider"/>
-    <div class="chain-label">// Select payment rail</div>
-    <div class="chains">
-      <div class="chain-opt active" onclick="selectChain(this,'tempo')" data-chain="tempo">
-        <div class="chain-dot tempo"></div><div class="chain-name">Tempo</div><div class="chain-tag">INSTITUTIONAL · STRIPE INFRA</div>
+
+    <div class="tempo-rail">
+      <div class="tempo-rail-dot"></div>
+      <div class="tempo-rail-info">
+        <div class="tempo-rail-name">Tempo Network</div>
+        <div class="tempo-rail-tag">INSTITUTIONAL · STRIPE INFRA · TIP-20 · SUB-SECOND FINALITY</div>
       </div>
-      <div class="chain-opt" onclick="selectChain(this,'base')" data-chain="base">
-        <div class="chain-dot base"></div><div class="chain-name">Base</div><div class="chain-tag">RETAIL · SOCIAL</div>
-      </div>
-      <div class="chain-opt" onclick="selectChain(this,'arc')" data-chain="arc">
-        <div class="chain-dot arc"></div><div class="chain-name">Arc</div><div class="chain-tag">NATIVE USDC · FAST</div>
-      </div>
-      <div class="chain-opt" onclick="selectChain(this,'solana')" data-chain="solana">
-        <div class="chain-dot solana"></div><div class="chain-name">Solana</div><div class="chain-tag">MICROPAYMENTS · POS</div>
-      </div>
-      <div class="chain-opt" onclick="selectChain(this,'sui')" data-chain="sui">
-        <div class="chain-dot sui"></div><div class="chain-name">Sui</div><div class="chain-tag">HIGH-FREQUENCY</div>
-      </div>
+      <div class="tempo-rail-check">&#10003;</div>
     </div>
+
     <div class="wallet-connected" id="wallet-connected"></div>
     <button class="connect-btn" id="connect-btn" onclick="connectAndPay()">Connect Wallet</button>
-    <button class="pay-btn" id="pay-btn" onclick="sendPayment()">✓ Pay Now</button>
+    <button class="pay-btn" id="pay-btn" onclick="sendPayment()">&#10003; Pay Now on Tempo</button>
     <div class="status-msg" id="status-msg"></div>
   </div>
 
   <div class="not-found" id="not-found" style="display:none;">
-    <div class="not-found-title">404</div>
-    <div class="not-found-sub">// Invoice not found</div>
+    <div class="nf-title">404</div>
+    <div class="nf-sub">// Invoice not found</div>
   </div>
 </div>
 
-<!-- SUCCESS SCREEN -->
-<div class="card success-card" id="success-card" style="display:none; max-width:480px; width:100%; text-align:center; padding:40px;">
-  <div class="success-icon">✓</div>
-  <div class="success-title">PAID</div>
-  <div class="success-sub" id="success-sub">Payment confirmed on Tempo Testnet</div>
-  <div class="tx-link" id="tx-link"></div>
-  <button class="back-btn" onclick="goBack()">← Back to Nexus Pay</button>
+<div class="card success-card" id="success-card" style="max-width:480px;width:100%;text-align:center;padding:40px;">
+  <div class="s-icon">&#10003;</div>
+  <div class="s-title">PAID</div>
+  <div class="s-sub" id="s-sub">Payment confirmed on Tempo Testnet</div>
+  <div class="tx-link" id="tx-link" onclick="openTx()"></div>
+  <a class="back-btn" href="index.html">&#8592; Back to Dashboard</a>
 </div>
 
 <script>
   const TEMPO_CHAIN = {
-    chainId: '0xA5BF', // 42431 in hex
+    chainId: '0xA5BF',
     chainName: 'Tempo Testnet',
     nativeCurrency: { name: 'USD', symbol: 'USD', decimals: 18 },
     rpcUrls: ['https://rpc.moderato.tempo.xyz'],
     blockExplorerUrls: ['https://explorer.moderato.tempo.xyz']
   };
 
-  // USDC contract on Tempo testnet (use native ETH as fallback for testnet demo)
-  const USDC_TEMPO = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'; // Circle USDC
-
-  let selectedChain = 'tempo';
   let connectedWallet = null;
   let invoice = null;
+  let txHashGlobal = null;
 
-  // Load invoice from localStorage
-  const urlParams = new URLSearchParams(window.location.search);
-  const invoiceId = urlParams.get('id');
+  const params = new URLSearchParams(window.location.search);
+  const invoiceId = params.get('id');
 
   if (!invoiceId) {
-    document.getElementById('not-found').style.display = 'block';
-    document.getElementById('invoice-view').style.display = 'none';
+    showNotFound();
   } else {
     const invoices = JSON.parse(localStorage.getItem('nexuspay_invoices') || '[]');
     invoice = invoices.find(i => i.id === invoiceId);
     if (!invoice) {
-      document.getElementById('not-found').style.display = 'block';
-      document.getElementById('invoice-view').style.display = 'none';
+      showNotFound();
     } else {
       document.getElementById('pay-amount').textContent = '$' + parseFloat(invoice.amount).toFixed(2);
       document.getElementById('pay-desc').textContent = invoice.desc;
       document.getElementById('pay-from').textContent = '// From: ' + invoice.name + ' · To: ' + invoice.wallet.slice(0,6) + '...' + invoice.wallet.slice(-4);
+      if (invoice.status === 'paid') {
+        showSuccess(invoice.txHash, invoice.amount);
+      }
     }
   }
 
-  function selectChain(el, chain) {
-    document.querySelectorAll('.chain-opt').forEach(o => o.classList.remove('active'));
-    el.classList.add('active');
-    selectedChain = chain;
+  function showNotFound() {
+    document.getElementById('not-found').style.display = 'block';
+    document.getElementById('invoice-view').style.display = 'none';
   }
 
   async function connectAndPay() {
@@ -169,32 +144,28 @@
       setStatus('Connecting wallet...', 'loading');
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
       connectedWallet = accounts[0];
-      if (selectedChain === 'tempo') {
-        try {
-          await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [TEMPO_CHAIN] });
-          await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: TEMPO_CHAIN.chainId }] });
-        } catch(e) { console.log('Chain switch:', e.message); }
-      }
+      try {
+        await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [TEMPO_CHAIN] });
+        await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: TEMPO_CHAIN.chainId }] });
+      } catch(e) { console.log('Chain switch:', e.message); }
       document.getElementById('wallet-connected').style.display = 'block';
-      document.getElementById('wallet-connected').textContent = '✓ ' + connectedWallet.slice(0,6) + '...' + connectedWallet.slice(-4) + ' connected';
+      document.getElementById('wallet-connected').textContent = '&#10003; ' + connectedWallet.slice(0,6) + '...' + connectedWallet.slice(-4) + ' connected on Tempo';
       document.getElementById('connect-btn').style.display = 'none';
       document.getElementById('pay-btn').style.display = 'block';
-      setStatus('Wallet connected. Ready to pay!', 'success');
+      setStatus('Ready to pay on Tempo Testnet', 'success');
     } catch(e) { setStatus('Connection failed: ' + e.message, 'error'); }
   }
 
   async function sendPayment() {
     if (!connectedWallet || !invoice) return;
-    const payBtn = document.getElementById('pay-btn');
-    payBtn.disabled = true;
-    payBtn.textContent = 'Processing...';
+    const btn = document.getElementById('pay-btn');
+    btn.disabled = true;
+    btn.textContent = 'Processing on Tempo...';
     setStatus('Sending transaction on Tempo Testnet...', 'loading');
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
-      // Send native ETH as payment demo (testnet)
-      // In production: use USDC ERC20 transfer
-      const amountWei = ethers.parseEther('0.001'); // Small testnet amount for demo
+      const amountWei = ethers.parseEther('0.001');
       const tx = await signer.sendTransaction({
         to: invoice.wallet,
         value: amountWei,
@@ -202,29 +173,36 @@
       });
       setStatus('Transaction sent! Waiting for confirmation...', 'loading');
       await tx.wait();
-      // Show success
-      document.getElementById('pay-card').style.display = 'none';
-      document.getElementById('success-card').style.display = 'block';
-      document.getElementById('success-sub').textContent = parseFloat(invoice.amount).toFixed(2) + ' USDC paid via ' + selectedChain.toUpperCase() + ' · Tempo Testnet';
-      document.getElementById('tx-link').textContent = 'tx: ' + tx.hash;
-      // Update invoice status back on dashboard
       const invoices = JSON.parse(localStorage.getItem('nexuspay_invoices') || '[]');
       const inv = invoices.find(i => i.id === invoice.id);
       if (inv) { inv.status = 'paid'; inv.txHash = tx.hash; localStorage.setItem('nexuspay_invoices', JSON.stringify(invoices)); }
+      showSuccess(tx.hash, invoice.amount);
     } catch(e) {
-      payBtn.disabled = false;
-      payBtn.textContent = '✓ Pay Now';
+      btn.disabled = false;
+      btn.textContent = '&#10003; Pay Now on Tempo';
       setStatus('Transaction failed: ' + e.message, 'error');
     }
   }
 
-  function setStatus(msg, type='') {
-    const el = document.getElementById('status-msg');
-    el.textContent = msg;
-    el.className = 'status-msg ' + type;
+  function showSuccess(txHash, amount) {
+    txHashGlobal = txHash;
+    document.getElementById('pay-card').style.display = 'none';
+    const sc = document.getElementById('success-card');
+    sc.style.display = 'block';
+    sc.classList.add('show');
+    document.getElementById('s-sub').textContent = parseFloat(amount).toFixed(2) + ' USDC settled on Tempo Testnet';
+    document.getElementById('tx-link').textContent = txHash ? 'tx: ' + txHash : '// Payment recorded';
   }
 
-  function goBack() { window.location.href = 'index.html'; }
+  function openTx() {
+    if (txHashGlobal) window.open('https://explorer.moderato.tempo.xyz/tx/' + txHashGlobal, '_blank');
+  }
+
+  function setStatus(msg, type) {
+    const el = document.getElementById('status-msg');
+    el.textContent = msg;
+    el.className = 'status-msg ' + (type || '');
+  }
 </script>
 </body>
 </html>

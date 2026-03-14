@@ -1,650 +1,179 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Nexus Pay — Borderless Billing Protocol</title>
+  <title>Nexus Pay — Institutional Payments on Tempo</title>
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
       --bg: #080b10;
       --surface: #0e1520;
       --border: #1c2a3a;
       --accent: #00e5ff;
-      --accent2: #7b61ff;
+      --accent2: #635bff;
       --green: #00ffb2;
       --text: #e8f0fe;
       --muted: #5a7a9a;
       --tempo: #635bff;
-      --base: #0052ff;
-      --solana: #9945ff;
-      --sui: #4da2ff;
-      --arc: #00e5ff;
     }
-
     html { scroll-behavior: smooth; }
-
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Syne', sans-serif;
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    /* GRID BACKGROUND */
+    body { background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; min-height: 100vh; overflow-x: hidden; }
     body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
-      background-size: 48px 48px;
-      pointer-events: none;
-      z-index: 0;
+      content: ''; position: fixed; inset: 0;
+      background-image: linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+      background-size: 48px 48px; pointer-events: none; z-index: 0;
     }
-
-    /* GLOW ORBS */
-    .orb {
-      position: fixed;
-      border-radius: 50%;
-      filter: blur(120px);
-      opacity: 0.12;
-      pointer-events: none;
-      z-index: 0;
-    }
+    .orb { position: fixed; border-radius: 50%; filter: blur(120px); opacity: 0.12; pointer-events: none; z-index: 0; }
     .orb-1 { width: 600px; height: 600px; background: var(--accent2); top: -200px; right: -100px; }
     .orb-2 { width: 500px; height: 500px; background: var(--accent); bottom: -100px; left: -100px; }
-
-    /* NAV */
     nav {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 20px 48px;
-      background: rgba(8,11,16,0.8);
-      backdrop-filter: blur(20px);
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 48px; background: rgba(8,11,16,0.8); backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--border);
     }
-
-    .logo {
-      font-family: 'Space Mono', monospace;
-      font-size: 18px;
-      font-weight: 700;
-      letter-spacing: -0.5px;
-      color: var(--text);
-    }
+    .logo { font-family: 'Space Mono', monospace; font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
     .logo span { color: var(--accent); }
-
-    .nav-badge {
-      font-family: 'Space Mono', monospace;
-      font-size: 11px;
-      color: var(--accent);
-      border: 1px solid var(--accent);
-      padding: 4px 10px;
-      border-radius: 2px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-    }
-
-    /* HERO */
+    .nav-right { display: flex; align-items: center; gap: 16px; }
+    .nav-badge { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--tempo); border: 1px solid var(--tempo); padding: 4px 10px; border-radius: 2px; letter-spacing: 1px; text-transform: uppercase; }
+    .nav-link { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--muted); text-decoration: none; letter-spacing: 1px; transition: color 0.2s; }
+    .nav-link:hover { color: var(--accent); }
     .hero {
-      position: relative;
-      z-index: 1;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 120px 24px 80px;
+      position: relative; z-index: 1; min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 120px 24px 80px;
     }
-
-    .hero-tag {
-      font-family: 'Space Mono', monospace;
-      font-size: 11px;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 28px;
-      opacity: 0;
-      animation: fadeUp 0.6s ease 0.2s forwards;
-    }
-
-    h1 {
-      font-size: clamp(48px, 8vw, 96px);
-      font-weight: 800;
-      line-height: 1;
-      letter-spacing: -3px;
-      margin-bottom: 24px;
-      opacity: 0;
-      animation: fadeUp 0.6s ease 0.4s forwards;
-    }
-
-    h1 .line-2 {
-      display: block;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .hero-sub {
-      font-size: 18px;
-      color: var(--muted);
-      max-width: 540px;
-      line-height: 1.6;
-      margin-bottom: 48px;
-      opacity: 0;
-      animation: fadeUp 0.6s ease 0.6s forwards;
-    }
-
-    .cta-row {
-      display: flex;
-      gap: 16px;
-      align-items: center;
-      flex-wrap: wrap;
-      justify-content: center;
-      opacity: 0;
-      animation: fadeUp 0.6s ease 0.8s forwards;
-    }
-
-    .btn-primary {
-      background: var(--accent);
-      color: #000;
-      font-family: 'Space Mono', monospace;
-      font-weight: 700;
-      font-size: 13px;
-      letter-spacing: 1px;
-      padding: 14px 28px;
-      border: none;
-      cursor: pointer;
-      text-transform: uppercase;
-      transition: all 0.2s;
-      clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
-    }
-    .btn-primary:hover { background: #fff; transform: translateY(-2px); }
-
-    .btn-secondary {
-      font-family: 'Space Mono', monospace;
-      font-size: 13px;
-      color: var(--muted);
-      background: transparent;
-      border: 1px solid var(--border);
-      padding: 14px 28px;
-      cursor: pointer;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      transition: all 0.2s;
-    }
+    .hero-tag { font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--tempo); margin-bottom: 28px; opacity: 0; animation: fadeUp 0.6s ease 0.2s forwards; }
+    h1 { font-size: clamp(48px, 8vw, 96px); font-weight: 800; line-height: 1; letter-spacing: -3px; margin-bottom: 24px; opacity: 0; animation: fadeUp 0.6s ease 0.4s forwards; }
+    h1 .line-2 { display: block; background: linear-gradient(135deg, var(--accent), var(--tempo)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero-sub { font-size: 18px; color: var(--muted); max-width: 540px; line-height: 1.6; margin-bottom: 48px; opacity: 0; animation: fadeUp 0.6s ease 0.6s forwards; }
+    .cta-row { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; justify-content: center; opacity: 0; animation: fadeUp 0.6s ease 0.8s forwards; }
+    .btn-primary { background: var(--tempo); color: #fff; font-family: 'Space Mono', monospace; font-weight: 700; font-size: 13px; letter-spacing: 1px; padding: 14px 28px; border: none; cursor: pointer; text-transform: uppercase; transition: all 0.2s; clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px)); text-decoration: none; display: inline-block; }
+    .btn-primary:hover { background: var(--accent); color: #000; transform: translateY(-2px); }
+    .btn-secondary { font-family: 'Space Mono', monospace; font-size: 13px; color: var(--muted); background: transparent; border: 1px solid var(--border); padding: 14px 28px; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; transition: all 0.2s; text-decoration: none; display: inline-block; }
     .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
-
-    /* CHAINS */
-    .chains-bar {
-      position: relative;
-      z-index: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-top: 64px;
-      opacity: 0;
-      animation: fadeUp 0.6s ease 1s forwards;
-    }
-
-    .chain-pill {
-      font-family: 'Space Mono', monospace;
-      font-size: 11px;
-      padding: 6px 14px;
-      border-radius: 2px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      border: 1px solid;
-    }
-    .chain-pill.tempo  { color: var(--tempo);  border-color: var(--tempo);  background: rgba(99,91,255,0.08); }
-    .chain-pill.base   { color: var(--base);   border-color: var(--base);   background: rgba(0,82,255,0.08); }
-    .chain-pill.solana { color: var(--solana); border-color: var(--solana); background: rgba(153,69,255,0.08); }
-    .chain-pill.sui    { color: var(--sui);    border-color: var(--sui);    background: rgba(77,162,255,0.08); }
-    .chain-pill.arc    { color: var(--arc);    border-color: var(--arc);    background: rgba(0,229,255,0.08); }
-
-    /* DEMO SECTION */
-    section {
-      position: relative;
-      z-index: 1;
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 80px 24px;
-    }
-
-    .section-label {
-      font-family: 'Space Mono', monospace;
-      font-size: 11px;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 16px;
-    }
-
-    .section-title {
-      font-size: 40px;
-      font-weight: 800;
-      letter-spacing: -1.5px;
-      margin-bottom: 48px;
-      line-height: 1.1;
-    }
-
-    /* DEMO APP */
-    .demo-wrapper {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 2px;
-      background: var(--border);
-      border: 1px solid var(--border);
-    }
-
-    @media (max-width: 768px) {
-      .demo-wrapper { grid-template-columns: 1fr; }
-    }
-
-    .demo-panel {
-      background: var(--surface);
-      padding: 36px;
-    }
-
-    .panel-title {
-      font-family: 'Space Mono', monospace;
-      font-size: 11px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--muted);
-      margin-bottom: 28px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .panel-title::before {
-      content: '';
-      display: block;
-      width: 6px;
-      height: 6px;
-      background: var(--accent);
-      border-radius: 50%;
-    }
-
-    .form-group {
-      margin-bottom: 20px;
-    }
-
-    label {
-      display: block;
-      font-family: 'Space Mono', monospace;
-      font-size: 11px;
-      color: var(--muted);
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      margin-bottom: 8px;
-    }
-
-    input, select, textarea {
-      width: 100%;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      color: var(--text);
-      font-family: 'Space Mono', monospace;
-      font-size: 14px;
-      padding: 12px 16px;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-    input:focus, select:focus, textarea:focus { border-color: var(--accent); }
-    select option { background: var(--bg); }
-
-    .amount-row {
-      display: flex;
-      gap: 2px;
-    }
-    .currency-badge {
-      background: var(--border);
-      border: 1px solid var(--border);
-      padding: 12px 16px;
-      font-family: 'Space Mono', monospace;
-      font-size: 12px;
-      color: var(--accent);
-      white-space: nowrap;
-      border-left: none;
-    }
-
-    .generate-btn {
-      width: 100%;
-      background: var(--accent);
-      color: #000;
-      font-family: 'Space Mono', monospace;
-      font-weight: 700;
-      font-size: 12px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      padding: 16px;
-      border: none;
-      cursor: pointer;
-      margin-top: 8px;
-      transition: all 0.2s;
-      clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
-    }
-    .generate-btn:hover { background: #fff; }
-
-    /* CHECKOUT PREVIEW */
-    .checkout-preview {
-      display: flex;
-      flex-direction: column;
-      gap: 0;
-    }
-
-    .invoice-card {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      padding: 24px;
-      margin-bottom: 20px;
-    }
-
-    .invoice-amount {
-      font-size: 42px;
-      font-weight: 800;
-      letter-spacing: -2px;
-      color: var(--text);
-      margin-bottom: 4px;
-    }
-
-    .invoice-meta {
-      font-family: 'Space Mono', monospace;
-      font-size: 11px;
-      color: var(--muted);
-      letter-spacing: 1px;
-    }
-
-    .chain-select-label {
-      font-family: 'Space Mono', monospace;
-      font-size: 11px;
-      color: var(--muted);
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      margin-bottom: 12px;
-    }
-
-    .chain-options {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin-bottom: 20px;
-    }
-
-    .chain-option {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 14px 16px;
-      border: 1px solid var(--border);
-      background: var(--bg);
-      cursor: pointer;
-      transition: all 0.15s;
-      font-family: 'Space Mono', monospace;
-      font-size: 12px;
-    }
-    .chain-option:hover, .chain-option.active {
-      border-color: var(--accent);
-      background: rgba(0,229,255,0.04);
-    }
-    .chain-option.active { border-color: var(--accent); }
-
-    .chain-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .chain-option-name { flex: 1; color: var(--text); }
-    .chain-option-tag {
-      font-size: 10px;
-      color: var(--muted);
-      letter-spacing: 1px;
-    }
-
-    .chain-option .chain-dot.tempo  { background: var(--tempo); }
-    .chain-option .chain-dot.base   { background: var(--base); }
-    .chain-option .chain-dot.solana { background: var(--solana); }
-    .chain-option .chain-dot.sui    { background: var(--sui); }
-    .chain-option .chain-dot.arc    { background: var(--arc); }
-
-    .pay-btn {
-      width: 100%;
-      background: var(--green);
-      color: #000;
-      font-family: 'Space Mono', monospace;
-      font-weight: 700;
-      font-size: 12px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      padding: 16px;
-      border: none;
-      cursor: pointer;
-      transition: all 0.2s;
-      clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
-    }
-    .pay-btn:hover { background: #fff; }
-
-    /* SUCCESS STATE */
-    .success-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(8,11,16,0.95);
-      z-index: 200;
-      align-items: center;
-      justify-content: center;
-      flex-direction: column;
-      text-align: center;
-      gap: 20px;
-    }
-    .success-overlay.show { display: flex; }
-
-    .success-icon {
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      background: rgba(0,255,178,0.1);
-      border: 2px solid var(--green);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 32px;
-    }
-
-    .success-title {
-      font-size: 48px;
-      font-weight: 800;
-      letter-spacing: -2px;
-      color: var(--green);
-    }
-
-    .success-sub {
-      font-family: 'Space Mono', monospace;
-      font-size: 13px;
-      color: var(--muted);
-      letter-spacing: 1px;
-    }
-
-    .success-close {
-      font-family: 'Space Mono', monospace;
-      font-size: 11px;
-      color: var(--muted);
-      background: transparent;
-      border: 1px solid var(--border);
-      padding: 10px 24px;
-      cursor: pointer;
-      margin-top: 8px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-    }
-
-    /* LINK PREVIEW */
-    .link-preview {
-      display: none;
-      margin-top: 16px;
-      background: var(--bg);
-      border: 1px solid var(--accent);
-      padding: 14px 16px;
-      font-family: 'Space Mono', monospace;
-      font-size: 12px;
-      color: var(--accent);
-      word-break: break-all;
-      position: relative;
-    }
+    .tempo-bar { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; gap: 24px; flex-wrap: wrap; margin-top: 64px; opacity: 0; animation: fadeUp 0.6s ease 1s forwards; }
+    .tempo-stat { text-align: center; }
+    .tempo-stat-val { font-family: 'Space Mono', monospace; font-size: 20px; font-weight: 700; color: var(--accent); }
+    .tempo-stat-label { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; }
+    .tempo-divider { width: 1px; height: 40px; background: var(--border); }
+    section { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 80px 24px; }
+    .section-label { font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); margin-bottom: 16px; }
+    .section-title { font-size: 40px; font-weight: 800; letter-spacing: -1.5px; margin-bottom: 48px; line-height: 1.1; }
+    .demo-wrapper { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; background: var(--border); border: 1px solid var(--border); }
+    @media (max-width: 768px) { .demo-wrapper { grid-template-columns: 1fr; } nav { padding: 16px 20px; } }
+    .demo-panel { background: var(--surface); padding: 36px; }
+    .panel-title { font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 28px; display: flex; align-items: center; gap: 8px; }
+    .panel-title::before { content: ''; display: block; width: 6px; height: 6px; background: var(--tempo); border-radius: 50%; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+    input, select { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: 'Space Mono', monospace; font-size: 14px; padding: 12px 16px; outline: none; transition: border-color 0.2s; }
+    input:focus, select:focus { border-color: var(--tempo); }
+    .amount-row { display: flex; gap: 2px; }
+    .currency-badge { background: var(--border); border: 1px solid var(--border); padding: 12px 16px; font-family: 'Space Mono', monospace; font-size: 12px; color: var(--accent); white-space: nowrap; border-left: none; }
+    .generate-btn { width: 100%; background: var(--tempo); color: #fff; font-family: 'Space Mono', monospace; font-weight: 700; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; padding: 16px; border: none; cursor: pointer; margin-top: 8px; transition: all 0.2s; clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px)); }
+    .generate-btn:hover { background: var(--accent); color: #000; }
+    .link-preview { display: none; margin-top: 16px; background: var(--bg); border: 1px solid var(--tempo); padding: 14px 16px; font-family: 'Space Mono', monospace; font-size: 12px; color: var(--tempo); word-break: break-all; }
     .link-preview.show { display: block; }
-    .copy-hint {
-      font-size: 10px;
-      color: var(--muted);
-      margin-top: 6px;
-      letter-spacing: 1px;
-    }
-
-    /* HOW IT WORKS */
-    .steps {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 2px;
-      background: var(--border);
-      margin-top: 48px;
-    }
-
-    .step {
-      background: var(--surface);
-      padding: 32px 28px;
-    }
-
-    .step-num {
-      font-family: 'Space Mono', monospace;
-      font-size: 48px;
-      font-weight: 700;
-      color: var(--border);
-      line-height: 1;
-      margin-bottom: 20px;
-    }
-
-    .step-title {
-      font-size: 18px;
-      font-weight: 700;
-      margin-bottom: 10px;
-      letter-spacing: -0.5px;
-    }
-
-    .step-desc {
-      font-size: 14px;
-      color: var(--muted);
-      line-height: 1.6;
-    }
-
-    /* FOOTER */
-    footer {
-      position: relative;
-      z-index: 1;
-      border-top: 1px solid var(--border);
-      padding: 32px 48px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .footer-logo {
-      font-family: 'Space Mono', monospace;
-      font-size: 14px;
-      color: var(--muted);
-    }
+    .copy-hint { font-size: 10px; color: var(--muted); margin-top: 6px; letter-spacing: 1px; }
+    .checkout-card { background: var(--bg); border: 1px solid var(--border); padding: 24px; margin-bottom: 20px; }
+    .invoice-amount { font-size: 42px; font-weight: 800; letter-spacing: -2px; margin-bottom: 4px; }
+    .invoice-meta { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; }
+    .tempo-only-badge { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border: 1px solid var(--tempo); background: rgba(99,91,255,0.08); margin-bottom: 20px; font-family: 'Space Mono', monospace; font-size: 12px; color: var(--text); }
+    .tempo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--tempo); flex-shrink: 0; animation: pulse 2s infinite; }
+    .tempo-name { flex: 1; }
+    .tempo-tag { font-size: 10px; color: var(--muted); letter-spacing: 1px; }
+    .pay-btn-demo { width: 100%; background: var(--green); color: #000; font-family: 'Space Mono', monospace; font-weight: 700; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; padding: 16px; border: none; cursor: pointer; transition: all 0.2s; clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px)); }
+    .pay-btn-demo:hover { background: #fff; }
+    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2px; background: var(--border); margin-top: 48px; }
+    .step { background: var(--surface); padding: 32px 28px; }
+    .step-num { font-family: 'Space Mono', monospace; font-size: 48px; font-weight: 700; color: var(--border); line-height: 1; margin-bottom: 20px; }
+    .step-title { font-size: 18px; font-weight: 700; margin-bottom: 10px; letter-spacing: -0.5px; }
+    .step-desc { font-size: 14px; color: var(--muted); line-height: 1.6; }
+    .powered-by-section { display: flex; align-items: center; justify-content: center; gap: 32px; flex-wrap: wrap; margin-top: 80px; padding: 48px 24px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .powered-label { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 3px; text-transform: uppercase; }
+    .powered-name { font-family: 'Space Mono', monospace; font-size: 16px; font-weight: 700; color: var(--text); }
+    footer { position: relative; z-index: 1; border-top: 1px solid var(--border); padding: 32px 48px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+    .footer-logo { font-family: 'Space Mono', monospace; font-size: 14px; color: var(--muted); }
     .footer-logo span { color: var(--accent); }
-
-    .footer-note {
-      font-family: 'Space Mono', monospace;
-      font-size: 11px;
-      color: var(--muted);
-      letter-spacing: 1px;
-    }
-
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(20px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    /* SCROLLBAR */
+    .footer-note { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; }
+    .success-overlay { display: none; position: fixed; inset: 0; background: rgba(8,11,16,0.95); z-index: 200; align-items: center; justify-content: center; flex-direction: column; text-align: center; gap: 20px; }
+    .success-overlay.show { display: flex; }
+    .success-icon { width: 80px; height: 80px; border-radius: 50%; background: rgba(0,255,178,0.1); border: 2px solid var(--green); display: flex; align-items: center; justify-content: center; font-size: 32px; }
+    .success-title { font-size: 48px; font-weight: 800; letter-spacing: -2px; color: var(--green); }
+    .success-sub { font-family: 'Space Mono', monospace; font-size: 13px; color: var(--muted); letter-spacing: 1px; }
+    .success-close { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); background: transparent; border: 1px solid var(--border); padding: 10px 24px; cursor: pointer; margin-top: 8px; letter-spacing: 2px; text-transform: uppercase; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: var(--bg); }
     ::-webkit-scrollbar-thumb { background: var(--border); }
   </style>
 </head>
 <body>
-
 <div class="orb orb-1"></div>
 <div class="orb orb-2"></div>
 
-<!-- NAV -->
 <nav>
   <div class="logo">NEXUS<span>.</span>PAY</div>
-  <div class="nav-badge">Tempo Hackathon 2026</div>
+  <div class="nav-right">
+    <div class="nav-badge">Tempo Hackathon 2026</div>
+    <a href="index.html" class="nav-link">Dashboard</a>
+  </div>
 </nav>
 
-<!-- HERO -->
 <div class="hero">
-  <div class="hero-tag">// Borderless Billing Protocol</div>
+  <div class="hero-tag">// Institutional Billing Protocol on Tempo</div>
   <h1>
-    Get paid anywhere.
-    <span class="line-2">Any chain. Zero friction.</span>
+    Get paid.
+    <span class="line-2">Zero friction.</span>
   </h1>
   <p class="hero-sub">
-    Create a payment link in 10 seconds. Your payer chooses the chain. 
-    You receive USDC directly to your wallet. No banks. No intermediaries. No waiting.
+    Create a payment link in 10 seconds. Your client pays in stablecoins on Tempo — the institutional-grade payment chain backed by Stripe and Paradigm. No banks. No intermediaries. No waiting.
   </p>
   <div class="cta-row">
-    <button class="btn-primary" onclick="document.getElementById('demo').scrollIntoView({behavior:'smooth'})">
-      Try the Demo
-    </button>
-    <button class="btn-secondary" onclick="window.open('https://github.com','_blank')">
-      View on GitHub
-    </button>
+    <a class="btn-primary" href="#demo">Try the Demo</a>
+    <a class="btn-secondary" href="index.html">Open Dashboard</a>
   </div>
-  <div class="chains-bar">
-    <div class="chain-pill tempo">Tempo</div>
-    <div class="chain-pill base">Base</div>
-    <div class="chain-pill solana">Solana</div>
-    <div class="chain-pill sui">Sui</div>
-    <div class="chain-pill arc">Arc</div>
+  <div class="tempo-bar">
+    <div class="tempo-stat">
+      <div class="tempo-stat-val">&lt;$0.001</div>
+      <div class="tempo-stat-label">Fee per tx</div>
+    </div>
+    <div class="tempo-divider"></div>
+    <div class="tempo-stat">
+      <div class="tempo-stat-val">Sub-second</div>
+      <div class="tempo-stat-label">Finality</div>
+    </div>
+    <div class="tempo-divider"></div>
+    <div class="tempo-stat">
+      <div class="tempo-stat-val">TIP-20</div>
+      <div class="tempo-stat-label">Native stablecoins</div>
+    </div>
+    <div class="tempo-divider"></div>
+    <div class="tempo-stat">
+      <div class="tempo-stat-val">Stripe</div>
+      <div class="tempo-stat-label">Infrastructure</div>
+    </div>
   </div>
 </div>
 
-<!-- DEMO SECTION -->
 <section id="demo">
   <div class="section-label">// Live Demo</div>
   <div class="section-title">Create a payment link.<br>Right now.</div>
-
   <div class="demo-wrapper">
-    <!-- LEFT: INVOICE CREATOR -->
     <div class="demo-panel">
       <div class="panel-title">Invoice Creator</div>
-
       <div class="form-group">
         <label>Your Name / Business</label>
         <input type="text" id="merchant-name" placeholder="e.g. Alex Rivera" value="Alex Rivera"/>
       </div>
-
       <div class="form-group">
         <label>Invoice Description</label>
-        <input type="text" id="description" placeholder="e.g. Brand Design — Q1 2026" value="Brand Design — Q1 2026"/>
+        <input type="text" id="description" placeholder="e.g. Brand Design Q1 2026" value="Brand Design Q1 2026"/>
       </div>
-
       <div class="form-group">
         <label>Amount</label>
         <div class="amount-row">
@@ -652,71 +181,35 @@
           <div class="currency-badge">USDC</div>
         </div>
       </div>
-
       <div class="form-group">
         <label>Your Wallet Address</label>
-        <input type="text" id="wallet" placeholder="0x..." value="0xf39F...2266"/>
+        <input type="text" id="wallet" placeholder="0x..."/>
       </div>
-
-      <button class="generate-btn" onclick="generateLink()">
-        → Generate Payment Link
-      </button>
-
+      <button class="generate-btn" onclick="generateLink()">&#8594; Generate Payment Link</button>
       <div class="link-preview" id="link-preview">
         <div id="link-text"></div>
         <div class="copy-hint">// Click to copy</div>
       </div>
     </div>
-
-    <!-- RIGHT: PAYER CHECKOUT -->
     <div class="demo-panel">
       <div class="panel-title">Payer Checkout</div>
-
-      <div class="invoice-card">
+      <div class="checkout-card">
         <div class="invoice-amount" id="preview-amount">$500 USDC</div>
-        <div class="invoice-meta" id="preview-meta">BRAND DESIGN — Q1 2026 · FROM ALEX RIVERA</div>
+        <div class="invoice-meta" id="preview-meta">BRAND DESIGN Q1 2026 · FROM ALEX RIVERA</div>
       </div>
-
-      <div class="chain-select-label">// Select payment rail</div>
-      <div class="chain-options" id="chain-options">
-        <div class="chain-option active" onclick="selectChain(this, 'TEMPO')" data-chain="TEMPO">
-          <div class="chain-dot tempo"></div>
-          <div class="chain-option-name">Tempo</div>
-          <div class="chain-option-tag">INSTITUTIONAL · STRIPE INFRA</div>
-        </div>
-        <div class="chain-option" onclick="selectChain(this, 'BASE')" data-chain="BASE">
-          <div class="chain-dot base"></div>
-          <div class="chain-option-name">Base</div>
-          <div class="chain-option-tag">RETAIL · SOCIAL</div>
-        </div>
-        <div class="chain-option" onclick="selectChain(this, 'ARC')" data-chain="ARC">
-          <div class="chain-dot arc"></div>
-          <div class="chain-option-name">Arc</div>
-          <div class="chain-option-tag">NATIVE USDC · FAST</div>
-        </div>
-        <div class="chain-option" onclick="selectChain(this, 'SOLANA')" data-chain="SOLANA">
-          <div class="chain-dot solana"></div>
-          <div class="chain-option-name">Solana</div>
-          <div class="chain-option-tag">MICROPAYMENTS · POS</div>
-        </div>
-        <div class="chain-option" onclick="selectChain(this, 'SUI')" data-chain="SUI">
-          <div class="chain-dot sui"></div>
-          <div class="chain-option-name">Sui</div>
-          <div class="chain-option-tag">HIGH-FREQUENCY</div>
-        </div>
+      <div class="tempo-only-badge">
+        <div class="tempo-dot"></div>
+        <div class="tempo-name">Tempo Network</div>
+        <div class="tempo-tag">INSTITUTIONAL · STRIPE INFRA · TIP-20</div>
       </div>
-
-      <button class="pay-btn" onclick="simulatePay()">
-        ✓ Pay Now
-      </button>
+      <button class="pay-btn-demo" onclick="simulatePay()">&#10003; Pay Now on Tempo</button>
     </div>
   </div>
 </section>
 
-<!-- HOW IT WORKS -->
 <section>
   <div class="section-label">// Protocol Flow</div>
-  <div class="section-title">Four steps to global payment.</div>
+  <div class="section-title">Four steps to instant settlement.</div>
   <div class="steps">
     <div class="step">
       <div class="step-num">01</div>
@@ -730,70 +223,70 @@
     </div>
     <div class="step">
       <div class="step-num">03</div>
-      <div class="step-title">Payer Chooses Rail</div>
-      <div class="step-desc">Payer picks their preferred chain — Tempo, Base, Solana, and more.</div>
+      <div class="step-title">Client Pays on Tempo</div>
+      <div class="step-desc">Client connects wallet and pays in stablecoins on Tempo's institutional rails.</div>
     </div>
     <div class="step">
       <div class="step-num">04</div>
       <div class="step-title">Instant Settlement</div>
-      <div class="step-desc">USDC lands in your wallet. Invoice marked paid. Both parties notified.</div>
+      <div class="step-desc">USDC lands in your wallet in under a second. Invoice marked paid.</div>
     </div>
   </div>
 </section>
 
-<!-- FOOTER -->
+<div class="powered-by-section">
+  <div style="text-align:center">
+    <div class="powered-label">Built on</div>
+    <div class="powered-name" style="color:var(--tempo)">Tempo Network</div>
+  </div>
+  <div style="text-align:center">
+    <div class="powered-label">Backed by</div>
+    <div class="powered-name">Stripe + Paradigm</div>
+  </div>
+  <div style="text-align:center">
+    <div class="powered-label">Trusted by</div>
+    <div class="powered-name">UBS · Visa · Mastercard</div>
+  </div>
+  <div style="text-align:center">
+    <div class="powered-label">Standard</div>
+    <div class="powered-name">TIP-20 Stablecoins</div>
+  </div>
+</div>
+
 <footer>
   <div class="footer-logo">NEXUS<span>.</span>PAY</div>
-  <div class="footer-note">// Built for Tempo × Stripe Hackathon 2026</div>
+  <div class="footer-note">// Built for Tempo x Stripe Hackathon 2026</div>
 </footer>
 
-<!-- SUCCESS OVERLAY -->
 <div class="success-overlay" id="success-overlay">
-  <div class="success-icon">✓</div>
+  <div class="success-icon">&#10003;</div>
   <div class="success-title">PAID</div>
   <div class="success-sub" id="success-detail">500 USDC received via TEMPO</div>
-  <div class="success-sub" style="font-size:11px; margin-top: -8px;">// Invoice marked as settled</div>
-  <button class="success-close" onclick="document.getElementById('success-overlay').classList.remove('show')">
-    Close
-  </button>
+  <div class="success-sub" style="font-size:11px; margin-top:-8px;">// Invoice settled on Tempo Network</div>
+  <button class="success-close" onclick="document.getElementById('success-overlay').classList.remove('show')">Close</button>
 </div>
 
 <script>
-  let selectedChain = 'TEMPO';
-
-  function selectChain(el, chain) {
-    document.querySelectorAll('.chain-option').forEach(o => o.classList.remove('active'));
-    el.classList.add('active');
-    selectedChain = chain;
-  }
-
   function generateLink() {
     const name = document.getElementById('merchant-name').value || 'Merchant';
     const amount = document.getElementById('amount').value || '0';
     const desc = document.getElementById('description').value || 'Invoice';
-    const id = Math.random().toString(36).slice(2, 9).toUpperCase();
-
-    // Update checkout preview
-    document.getElementById('preview-amount').textContent = `$${amount} USDC`;
-    document.getElementById('preview-meta').textContent =
-      `${desc.toUpperCase()} · FROM ${name.toUpperCase()}`;
-
-    const link = `nexuspay.xyz/pay/${id}`;
+    const id = Math.random().toString(36).slice(2,9).toUpperCase();
+    document.getElementById('preview-amount').textContent = '$' + amount + ' USDC';
+    document.getElementById('preview-meta').textContent = desc.toUpperCase() + ' · FROM ' + name.toUpperCase();
+    const link = window.location.origin + '/pay.html?id=' + id;
     const preview = document.getElementById('link-preview');
     document.getElementById('link-text').textContent = link;
     preview.classList.add('show');
-
     preview.onclick = () => {
       navigator.clipboard.writeText(link).catch(() => {});
       preview.style.borderColor = '#00ffb2';
-      setTimeout(() => preview.style.borderColor = 'var(--accent)', 800);
+      setTimeout(() => preview.style.borderColor = 'var(--tempo)', 800);
     };
   }
-
   function simulatePay() {
     const amount = document.getElementById('amount').value || '500';
-    document.getElementById('success-detail').textContent =
-      `${amount} USDC received via ${selectedChain}`;
+    document.getElementById('success-detail').textContent = amount + ' USDC received via TEMPO NETWORK';
     document.getElementById('success-overlay').classList.add('show');
   }
 </script>
