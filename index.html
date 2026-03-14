@@ -34,7 +34,8 @@
       border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; transition: all 0.2s;
     }
     .wallet-btn:hover { background: var(--accent); color: #000; }
-    .wallet-btn.connected { background: var(--accent); color: #000; }
+    .wallet-btn.connected { background: var(--accent); color: #000; border-color: var(--accent); }
+    .wallet-btn:disabled { opacity: 0.6; cursor: not-allowed; }
     .wallet-addr { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--green); display: none; }
     .create-btn {
       font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 700;
@@ -49,7 +50,8 @@
     .stat-value { font-size: 32px; font-weight: 800; letter-spacing: -1.5px; }
     .stat-value.green { color: var(--green); }
     .stat-value.accent { color: var(--accent); }
-    .stat-value.tempo { color: var(--tempo); font-size: 16px; margin-top: 8px; }
+    .stat-value.tempo { color: var(--tempo); font-size: 16px; margin-top: 8px; display: flex; align-items: center; gap: 6px; }
+    .tempo-pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--tempo); animation: pulse 2s infinite; flex-shrink: 0; }
     .header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
     .section-title { font-size: 22px; font-weight: 800; letter-spacing: -1px; }
     .invoices { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 2px; }
@@ -86,9 +88,11 @@
     .currency-tag { background: var(--border); border: 1px solid var(--border); border-left: none; padding: 12px 16px; font-family: 'Space Mono', monospace; font-size: 11px; color: var(--accent); white-space: nowrap; }
     .submit-btn { width: 100%; background: var(--accent); color: #000; font-family: 'Space Mono', monospace; font-weight: 700; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; padding: 16px; border: none; cursor: pointer; margin-top: 8px; transition: all 0.2s; }
     .submit-btn:hover { background: #fff; }
-    .toast { position: fixed; bottom: 32px; right: 32px; z-index: 300; background: var(--surface); border: 1px solid var(--green); color: var(--green); font-family: 'Space Mono', monospace; font-size: 12px; letter-spacing: 1px; padding: 14px 24px; transform: translateY(100px); opacity: 0; transition: all 0.3s; }
+    .toast { position: fixed; bottom: 32px; right: 32px; z-index: 300; background: var(--surface); border: 1px solid var(--green); color: var(--green); font-family: 'Space Mono', monospace; font-size: 12px; letter-spacing: 1px; padding: 14px 24px; transform: translateY(100px); opacity: 0; transition: all 0.3s; max-width: 360px; }
     .toast.show { transform: translateY(0); opacity: 1; }
     .toast.error { border-color: var(--red); color: var(--red); }
+    .toast.warning { border-color: var(--yellow); color: var(--yellow); }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
   </style>
 </head>
 <body>
@@ -105,7 +109,7 @@
     <div class="stat"><div class="stat-label">// Total Collected</div><div class="stat-value green" id="total-collected">$0.00</div></div>
     <div class="stat"><div class="stat-label">// Active Links</div><div class="stat-value accent" id="active-links">0</div></div>
     <div class="stat"><div class="stat-label">// Paid Invoices</div><div class="stat-value" id="paid-count">0</div></div>
-    <div class="stat"><div class="stat-label">// Network</div><div class="stat-value tempo">Tempo Testnet ●</div></div>
+    <div class="stat"><div class="stat-label">// Network</div><div class="stat-value tempo"><div class="tempo-pulse"></div>Tempo Testnet</div></div>
   </div>
   <div class="header-row">
     <div class="section-title">Your Payment Links</div>
@@ -130,8 +134,10 @@
 <div class="toast" id="toast"></div>
 
 <script>
+  const TEMPO_CHAIN_ID = '0xA5BF'; // 42431
+
   const TEMPO_CHAIN = {
-    chainId: '0xA5BF', // 42431 in hex
+    chainId: TEMPO_CHAIN_ID,
     chainName: 'Tempo Testnet',
     nativeCurrency: { name: 'USD', symbol: 'USD', decimals: 18 },
     rpcUrls: ['https://rpc.moderato.tempo.xyz'],
@@ -142,22 +148,98 @@
   let connectedWallet = null;
 
   async function connectWallet() {
-    if (!window.ethereum) { showToast('Please install MetaMask!', true); return; }
+    const btn = document.getElementById('wallet-btn');
+
+    if (!window.ethereum) {
+      showToast('MetaMask not detected! Please install MetaMask.', 'error');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Connecting...';
+
     try {
+      // 1. Request accounts
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
       connectedWallet = accounts[0];
+
+      // 2. Try to add Tempo chain first (safe to call even if already added)
       try {
-        await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [TEMPO_CHAIN] });
-        await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: TEMPO_CHAIN.chainId }] });
-      } catch(e) { console.log('Chain:', e.message); }
-      document.getElementById('wallet-btn').textContent = 'Connected';
-      document.getElementById('wallet-btn').classList.add('connected');
+        await window.ethereum.request({
+          method: 'wallet_addEthereumChain',
+          params: [TEMPO_CHAIN]
+        });
+      } catch (addErr) {
+        // Error code 4001 = user rejected, anything else = already exists or issue
+        if (addErr.code === 4001) {
+          showToast('You rejected the Tempo network addition.', 'warning');
+          btn.disabled = false;
+          btn.textContent = 'Connect Wallet';
+          return;
+        }
+        // Otherwise it might already be added, continue
+      }
+
+      // 3. Switch to Tempo chain
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: TEMPO_CHAIN_ID }]
+        });
+      } catch (switchErr) {
+        if (switchErr.code === 4001) {
+          showToast('You rejected the network switch. Please switch to Tempo Testnet.', 'warning');
+          btn.disabled = false;
+          btn.textContent = 'Connect Wallet';
+          return;
+        }
+        // If switch fails for another reason, warn but don't block
+        showToast('Could not switch to Tempo automatically — please switch manually.', 'warning');
+      }
+
+      // 4. Update UI
+      btn.textContent = 'Connected';
+      btn.classList.add('connected');
+      btn.disabled = false;
+
       const addrEl = document.getElementById('wallet-addr');
       addrEl.style.display = 'block';
-      addrEl.textContent = connectedWallet.slice(0,6) + '...' + connectedWallet.slice(-4);
+      addrEl.textContent = connectedWallet.slice(0, 6) + '...' + connectedWallet.slice(-4);
+
+      // Auto-fill wallet field in modal if open
       document.getElementById('merchant-wallet').value = connectedWallet;
+
       showToast('✓ Connected to Tempo Testnet!');
-    } catch(e) { showToast('Failed: ' + e.message, true); }
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = 'Connect Wallet';
+      if (e.code === 4001) {
+        showToast('Connection rejected. Please approve in MetaMask.', 'error');
+      } else {
+        showToast('Connection failed: ' + e.message, 'error');
+      }
+    }
+  }
+
+  // Listen for account/chain changes
+  if (window.ethereum) {
+    window.ethereum.on('accountsChanged', (accounts) => {
+      if (accounts.length === 0) {
+        connectedWallet = null;
+        document.getElementById('wallet-btn').textContent = 'Connect Wallet';
+        document.getElementById('wallet-btn').classList.remove('connected');
+        document.getElementById('wallet-addr').style.display = 'none';
+      } else {
+        connectedWallet = accounts[0];
+        document.getElementById('wallet-addr').textContent = connectedWallet.slice(0,6) + '...' + connectedWallet.slice(-4);
+      }
+    });
+
+    window.ethereum.on('chainChanged', (chainId) => {
+      if (chainId !== TEMPO_CHAIN_ID) {
+        showToast('Wrong network detected. Please switch to Tempo Testnet.', 'warning');
+      }
+    });
   }
 
   function createInvoice() {
@@ -165,11 +247,18 @@
     const desc = document.getElementById('invoice-desc').value.trim();
     const amount = document.getElementById('invoice-amount').value.trim();
     const wallet = document.getElementById('merchant-wallet').value.trim();
-    if (!name || !desc || !amount || !wallet) { showToast('Fill all fields!', true); return; }
+    if (!name || !desc || !amount || !wallet) { showToast('Please fill all fields!', 'error'); return; }
     const id = Math.random().toString(36).slice(2, 10).toUpperCase();
-    invoices.unshift({ id, name, desc, amount, wallet, status: 'pending', date: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}), txHash: null });
-    saveAndRender(); closeModal(); showToast('Payment link created!');
-    ['merchant-name','invoice-desc','invoice-amount','merchant-wallet'].forEach(i => document.getElementById(i).value = '');
+    invoices.unshift({
+      id, name, desc, amount, wallet,
+      status: 'pending',
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      txHash: null
+    });
+    saveAndRender();
+    closeModal();
+    showToast('Payment link created!');
+    ['merchant-name', 'invoice-desc', 'invoice-amount', 'merchant-wallet'].forEach(i => document.getElementById(i).value = '');
   }
 
   function renderInvoices() {
@@ -189,8 +278,9 @@
           <button class="btn-view" onclick="window.open('pay.html?id=${inv.id}','_blank')">Pay Page ↗</button>
         </div>
       </div>`).join('');
+
     const paid = invoices.filter(i => i.status === 'paid');
-    document.getElementById('total-collected').textContent = '$' + paid.reduce((s,i) => s + parseFloat(i.amount), 0).toFixed(2);
+    document.getElementById('total-collected').textContent = '$' + paid.reduce((s, i) => s + parseFloat(i.amount), 0).toFixed(2);
     document.getElementById('active-links').textContent = invoices.filter(i => i.status === 'pending').length;
     document.getElementById('paid-count').textContent = paid.length;
   }
@@ -199,17 +289,24 @@
   function copyLink(id) { navigator.clipboard.writeText(`${location.origin}/pay.html?id=${id}`).then(() => showToast('Link copied!')); }
   function openModal() { document.getElementById('modal').classList.add('show'); }
   function closeModal() { document.getElementById('modal').classList.remove('show'); }
-  function showToast(msg, error=false) {
+
+  function showToast(msg, type = '') {
     const t = document.getElementById('toast');
-    t.textContent = msg; t.className = 'toast show' + (error ? ' error' : '');
-    setTimeout(() => t.className = 'toast', 3000);
+    t.textContent = msg;
+    t.className = 'toast show' + (type ? ' ' + type : '');
+    setTimeout(() => t.className = 'toast', 3500);
   }
 
   // Handle return from pay page
   const p = new URLSearchParams(window.location.search);
   if (p.get('paid')) {
     const inv = invoices.find(i => i.id === p.get('paid'));
-    if (inv) { inv.status = 'paid'; inv.txHash = p.get('tx') || 'confirmed'; saveAndRender(); showToast('✓ Payment confirmed on Tempo!'); }
+    if (inv) {
+      inv.status = 'paid';
+      inv.txHash = p.get('tx') || 'confirmed';
+      saveAndRender();
+      showToast('✓ Payment confirmed on Tempo!');
+    }
     history.replaceState({}, '', location.pathname);
   }
 
