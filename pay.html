@@ -160,7 +160,7 @@
     if (!connectedWallet || !invoice) return;
     const btn = document.getElementById('pay-btn');
     btn.disabled = true;
-    btn.textContent = 'Processing on Tempo...';
+    btn.innerHTML = 'Processing on Tempo...';
     setStatus('Sending transaction on Tempo Testnet...', 'loading');
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
@@ -169,7 +169,6 @@
       const tx = await signer.sendTransaction({
         to: invoice.wallet,
         value: amountWei,
-        data: ethers.hexlify(ethers.toUtf8Bytes('nexuspay:' + invoice.id))
       });
       setStatus('Transaction sent! Waiting for confirmation...', 'loading');
       await tx.wait();
@@ -179,7 +178,7 @@
       showSuccess(tx.hash, invoice.amount);
     } catch(e) {
       btn.disabled = false;
-      btn.textContent = '&#10003; Pay Now on Tempo';
+      btn.innerHTML = '&#10003; Pay Now on Tempo';
       setStatus('Transaction failed: ' + e.message, 'error');
     }
   }
