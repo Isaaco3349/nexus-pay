@@ -34,7 +34,7 @@
       border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; transition: all 0.2s;
     }
     .wallet-btn:hover { background: var(--accent); color: #000; }
-    .wallet-btn.connected { background: var(--accent); color: #000; border-color: var(--accent); }
+    .wallet-btn.connected { background: var(--accent); color: #000; }
     .wallet-btn:disabled { opacity: 0.6; cursor: not-allowed; }
     .wallet-addr { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--green); display: none; }
     .create-btn {
@@ -117,7 +117,6 @@
   <div class="invoices" id="invoices-grid"></div>
 </main>
 
-<!-- MODAL -->
 <div class="modal-overlay" id="modal">
   <div class="modal">
     <div class="modal-title">New Payment Link <button class="modal-close" onclick="closeModal()">✕</button></div>
@@ -134,8 +133,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  const TEMPO_CHAIN_ID = '0xA5BF'; // 42431
-
+  const TEMPO_CHAIN_ID = '0xA5BF';
   const TEMPO_CHAIN = {
     chainId: TEMPO_CHAIN_ID,
     chainName: 'Tempo Testnet',
@@ -149,97 +147,41 @@
 
   async function connectWallet() {
     const btn = document.getElementById('wallet-btn');
-
-    if (!window.ethereum) {
-      showToast('MetaMask not detected! Please install MetaMask.', 'error');
-      return;
-    }
-
-    btn.disabled = true;
-    btn.textContent = 'Connecting...';
-
+    if (!window.ethereum) { showToast('MetaMask not detected! Please install MetaMask.', 'error'); return; }
+    btn.disabled = true; btn.textContent = 'Connecting...';
     try {
-      // 1. Request accounts
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
       connectedWallet = accounts[0];
-
-      // 2. Try to add Tempo chain first (safe to call even if already added)
       try {
-        await window.ethereum.request({
-          method: 'wallet_addEthereumChain',
-          params: [TEMPO_CHAIN]
-        });
-      } catch (addErr) {
-        // Error code 4001 = user rejected, anything else = already exists or issue
-        if (addErr.code === 4001) {
-          showToast('You rejected the Tempo network addition.', 'warning');
-          btn.disabled = false;
-          btn.textContent = 'Connect Wallet';
-          return;
-        }
-        // Otherwise it might already be added, continue
-      }
-
-      // 3. Switch to Tempo chain
+        await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [TEMPO_CHAIN] });
+      } catch (e) { if (e.code === 4001) { showToast('Rejected Tempo network.', 'warning'); btn.disabled = false; btn.textContent = 'Connect Wallet'; return; } }
       try {
-        await window.ethereum.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: TEMPO_CHAIN_ID }]
-        });
-      } catch (switchErr) {
-        if (switchErr.code === 4001) {
-          showToast('You rejected the network switch. Please switch to Tempo Testnet.', 'warning');
-          btn.disabled = false;
-          btn.textContent = 'Connect Wallet';
-          return;
-        }
-        // If switch fails for another reason, warn but don't block
-        showToast('Could not switch to Tempo automatically — please switch manually.', 'warning');
-      }
-
-      // 4. Update UI
-      btn.textContent = 'Connected';
-      btn.classList.add('connected');
-      btn.disabled = false;
-
+        await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: TEMPO_CHAIN_ID }] });
+      } catch (e) { if (e.code === 4001) { showToast('Please switch to Tempo Testnet.', 'warning'); btn.disabled = false; btn.textContent = 'Connect Wallet'; return; } }
+      btn.textContent = 'Connected'; btn.classList.add('connected'); btn.disabled = false;
       const addrEl = document.getElementById('wallet-addr');
       addrEl.style.display = 'block';
-      addrEl.textContent = connectedWallet.slice(0, 6) + '...' + connectedWallet.slice(-4);
-
-      // Auto-fill wallet field in modal if open
+      addrEl.textContent = connectedWallet.slice(0,6) + '...' + connectedWallet.slice(-4);
       document.getElementById('merchant-wallet').value = connectedWallet;
-
       showToast('✓ Connected to Tempo Testnet!');
     } catch (e) {
-      btn.disabled = false;
-      btn.textContent = 'Connect Wallet';
-      if (e.code === 4001) {
-        showToast('Connection rejected. Please approve in MetaMask.', 'error');
-      } else {
-        showToast('Connection failed: ' + e.message, 'error');
-      }
+      btn.disabled = false; btn.textContent = 'Connect Wallet';
+      showToast(e.code === 4001 ? 'Connection rejected.' : 'Failed: ' + e.message, 'error');
     }
   }
 
-  // Listen for account/chain changes
   if (window.ethereum) {
     window.ethereum.on('accountsChanged', (accounts) => {
-      if (accounts.length === 0) {
-        connectedWallet = null;
-        document.getElementById('wallet-btn').textContent = 'Connect Wallet';
-        document.getElementById('wallet-btn').classList.remove('connected');
-        document.getElementById('wallet-addr').style.display = 'none';
-      } else {
-        connectedWallet = accounts[0];
-        document.getElementById('wallet-addr').textContent = connectedWallet.slice(0,6) + '...' + connectedWallet.slice(-4);
-      }
+      if (!accounts.length) { connectedWallet = null; document.getElementById('wallet-btn').textContent = 'Connect Wallet'; document.getElementById('wallet-btn').classList.remove('connected'); document.getElementById('wallet-addr').style.display = 'none'; }
+      else { connectedWallet = accounts[0]; document.getElementById('wallet-addr').textContent = connectedWallet.slice(0,6) + '...' + connectedWallet.slice(-4); }
     });
+    window.ethereum.on('chainChanged', (chainId) => { if (chainId !== TEMPO_CHAIN_ID) showToast('Wrong network! Switch to Tempo Testnet.', 'warning'); });
+  }
 
-    window.ethereum.on('chainChanged', (chainId) => {
-      if (chainId !== TEMPO_CHAIN_ID) {
-        showToast('Wrong network detected. Please switch to Tempo Testnet.', 'warning');
-      }
-    });
+  // KEY FIX: encode all invoice data into the URL so any browser can open it
+  function buildPayLink(inv) {
+    const data = btoa(JSON.stringify({ id: inv.id, name: inv.name, desc: inv.desc, amount: inv.amount, wallet: inv.wallet }));
+    return `${location.origin}/pay.html?d=${encodeURIComponent(data)}`;
   }
 
   function createInvoice() {
@@ -249,24 +191,15 @@
     const wallet = document.getElementById('merchant-wallet').value.trim();
     if (!name || !desc || !amount || !wallet) { showToast('Please fill all fields!', 'error'); return; }
     const id = Math.random().toString(36).slice(2, 10).toUpperCase();
-    invoices.unshift({
-      id, name, desc, amount, wallet,
-      status: 'pending',
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      txHash: null
-    });
-    saveAndRender();
-    closeModal();
-    showToast('Payment link created!');
-    ['merchant-name', 'invoice-desc', 'invoice-amount', 'merchant-wallet'].forEach(i => document.getElementById(i).value = '');
+    const inv = { id, name, desc, amount, wallet, status: 'pending', date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), txHash: null };
+    invoices.unshift(inv);
+    saveAndRender(); closeModal(); showToast('Payment link created!');
+    ['merchant-name','invoice-desc','invoice-amount','merchant-wallet'].forEach(i => document.getElementById(i).value = '');
   }
 
   function renderInvoices() {
     const grid = document.getElementById('invoices-grid');
-    if (!invoices.length) {
-      grid.innerHTML = `<div class="empty"><div class="empty-title">No invoices yet</div><div class="empty-sub">// Create your first payment link above</div></div>`;
-      return;
-    }
+    if (!invoices.length) { grid.innerHTML = `<div class="empty"><div class="empty-title">No invoices yet</div><div class="empty-sub">// Create your first payment link above</div></div>`; return; }
     grid.innerHTML = invoices.map(inv => `
       <div class="invoice-card">
         <div class="card-top"><span class="status-badge ${inv.status}">${inv.status}</span><span class="card-date">${inv.date}</span></div>
@@ -275,41 +208,28 @@
         ${inv.txHash ? `<div class="tx-hash">tx: ${inv.txHash}</div>` : ''}
         <div class="card-actions">
           <button class="btn-copy" onclick="copyLink('${inv.id}')">Copy Link</button>
-          <button class="btn-view" onclick="window.open('pay.html?id=${inv.id}','_blank')">Pay Page ↗</button>
+          <button class="btn-view" onclick="openPayPage('${inv.id}')">Pay Page ↗</button>
         </div>
       </div>`).join('');
-
     const paid = invoices.filter(i => i.status === 'paid');
-    document.getElementById('total-collected').textContent = '$' + paid.reduce((s, i) => s + parseFloat(i.amount), 0).toFixed(2);
+    document.getElementById('total-collected').textContent = '$' + paid.reduce((s,i) => s + parseFloat(i.amount), 0).toFixed(2);
     document.getElementById('active-links').textContent = invoices.filter(i => i.status === 'pending').length;
     document.getElementById('paid-count').textContent = paid.length;
   }
 
+  function openPayPage(id) { const inv = invoices.find(i => i.id === id); if (inv) window.open(buildPayLink(inv), '_blank'); }
+  function copyLink(id) { const inv = invoices.find(i => i.id === id); if (inv) navigator.clipboard.writeText(buildPayLink(inv)).then(() => showToast('Link copied!')); }
   function saveAndRender() { localStorage.setItem('nexuspay_invoices', JSON.stringify(invoices)); renderInvoices(); }
-  function copyLink(id) { navigator.clipboard.writeText(`${location.origin}/pay.html?id=${id}`).then(() => showToast('Link copied!')); }
   function openModal() { document.getElementById('modal').classList.add('show'); }
   function closeModal() { document.getElementById('modal').classList.remove('show'); }
+  function showToast(msg, type = '') { const t = document.getElementById('toast'); t.textContent = msg; t.className = 'toast show' + (type ? ' ' + type : ''); setTimeout(() => t.className = 'toast', 3500); }
 
-  function showToast(msg, type = '') {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.className = 'toast show' + (type ? ' ' + type : '');
-    setTimeout(() => t.className = 'toast', 3500);
-  }
-
-  // Handle return from pay page
   const p = new URLSearchParams(window.location.search);
   if (p.get('paid')) {
     const inv = invoices.find(i => i.id === p.get('paid'));
-    if (inv) {
-      inv.status = 'paid';
-      inv.txHash = p.get('tx') || 'confirmed';
-      saveAndRender();
-      showToast('✓ Payment confirmed on Tempo!');
-    }
+    if (inv) { inv.status = 'paid'; inv.txHash = p.get('tx') || 'confirmed'; saveAndRender(); showToast('✓ Payment confirmed on Tempo!'); }
     history.replaceState({}, '', location.pathname);
   }
-
   renderInvoices();
 </script>
 </body>

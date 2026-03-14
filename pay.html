@@ -31,7 +31,7 @@
     .tempo-rail-name { font-family: 'Space Mono', monospace; font-size: 13px; color: var(--text); font-weight: 700; margin-bottom: 2px; }
     .tempo-rail-tag { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--muted); letter-spacing: 1px; }
     .tempo-rail-check { font-size: 16px; color: var(--tempo); }
-    .connect-btn { width: 100%; font-family: 'Space Mono', monospace; font-weight: 700; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; padding: 16px; border: none; cursor: pointer; transition: all 0.2s; background: transparent; color: var(--accent); border: 1px solid var(--accent); margin-bottom: 8px; }
+    .connect-btn { width: 100%; font-family: 'Space Mono', monospace; font-weight: 700; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; padding: 16px; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; transition: all 0.2s; margin-bottom: 8px; }
     .connect-btn:hover { background: var(--accent); color: #000; }
     .pay-btn { width: 100%; font-family: 'Space Mono', monospace; font-weight: 700; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; padding: 16px; border: none; cursor: pointer; transition: all 0.2s; background: var(--green); color: #000; display: none; clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px)); }
     .pay-btn:hover { background: #fff; }
@@ -43,7 +43,6 @@
     .status-msg.loading { color: var(--yellow); }
     .success-card { display: none; text-align: center; }
     .success-card.show { display: block; }
-    .success-card.show.card { border-color: var(--green); }
     .s-icon { font-size: 48px; margin-bottom: 16px; }
     .s-title { font-size: 40px; font-weight: 800; color: var(--green); letter-spacing: -2px; margin-bottom: 8px; }
     .s-sub { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--muted); margin-bottom: 24px; }
@@ -70,19 +69,17 @@
     <div class="invoice-desc" id="pay-desc">—</div>
     <div class="invoice-from" id="pay-from">—</div>
     <hr class="divider"/>
-
     <div class="tempo-rail">
       <div class="tempo-rail-dot"></div>
       <div class="tempo-rail-info">
         <div class="tempo-rail-name">Tempo Network</div>
         <div class="tempo-rail-tag">INSTITUTIONAL · STRIPE INFRA · TIP-20 · SUB-SECOND FINALITY</div>
       </div>
-      <div class="tempo-rail-check">&#10003;</div>
+      <div class="tempo-rail-check">✓</div>
     </div>
-
     <div class="wallet-connected" id="wallet-connected"></div>
     <button class="connect-btn" id="connect-btn" onclick="connectAndPay()">Connect Wallet</button>
-    <button class="pay-btn" id="pay-btn" onclick="sendPayment()">&#10003; Pay Now on Tempo</button>
+    <button class="pay-btn" id="pay-btn" onclick="sendPayment()">✓ Pay Now on Tempo</button>
     <div class="status-msg" id="status-msg"></div>
   </div>
 
@@ -93,16 +90,17 @@
 </div>
 
 <div class="card success-card" id="success-card" style="max-width:480px;width:100%;text-align:center;padding:40px;">
-  <div class="s-icon">&#10003;</div>
+  <div class="s-icon">✓</div>
   <div class="s-title">PAID</div>
   <div class="s-sub" id="s-sub">Payment confirmed on Tempo Testnet</div>
   <div class="tx-link" id="tx-link" onclick="openTx()"></div>
-  <a class="back-btn" href="index.html">&#8592; Back to Dashboard</a>
+  <a class="back-btn" href="index.html">← Back to Dashboard</a>
 </div>
 
 <script>
+  const TEMPO_CHAIN_ID = '0xA5BF';
   const TEMPO_CHAIN = {
-    chainId: '0xA5BF',
+    chainId: TEMPO_CHAIN_ID,
     chainName: 'Tempo Testnet',
     nativeCurrency: { name: 'USD', symbol: 'USD', decimals: 18 },
     rpcUrls: ['https://rpc.moderato.tempo.xyz'],
@@ -113,23 +111,20 @@
   let invoice = null;
   let txHashGlobal = null;
 
+  // KEY FIX: read invoice from URL param 'd' instead of localStorage
   const params = new URLSearchParams(window.location.search);
-  const invoiceId = params.get('id');
+  const encodedData = params.get('d');
 
-  if (!invoiceId) {
+  if (!encodedData) {
     showNotFound();
   } else {
-    const invoices = JSON.parse(localStorage.getItem('nexuspay_invoices') || '[]');
-    invoice = invoices.find(i => i.id === invoiceId);
-    if (!invoice) {
-      showNotFound();
-    } else {
+    try {
+      invoice = JSON.parse(atob(decodeURIComponent(encodedData)));
       document.getElementById('pay-amount').textContent = '$' + parseFloat(invoice.amount).toFixed(2);
       document.getElementById('pay-desc').textContent = invoice.desc;
       document.getElementById('pay-from').textContent = '// From: ' + invoice.name + ' · To: ' + invoice.wallet.slice(0,6) + '...' + invoice.wallet.slice(-4);
-      if (invoice.status === 'paid') {
-        showSuccess(invoice.txHash, invoice.amount);
-      }
+    } catch(e) {
+      showNotFound();
     }
   }
 
@@ -146,10 +141,12 @@
       connectedWallet = accounts[0];
       try {
         await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [TEMPO_CHAIN] });
-        await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: TEMPO_CHAIN.chainId }] });
-      } catch(e) { console.log('Chain switch:', e.message); }
+      } catch(e) { if (e.code === 4001) { setStatus('Rejected network addition.', 'error'); return; } }
+      try {
+        await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: TEMPO_CHAIN_ID }] });
+      } catch(e) { if (e.code === 4001) { setStatus('Please switch to Tempo Testnet.', 'error'); return; } }
       document.getElementById('wallet-connected').style.display = 'block';
-      document.getElementById('wallet-connected').innerHTML = '&#10003; ' + connectedWallet.slice(0,6) + '...' + connectedWallet.slice(-4) + ' connected on Tempo'; + connectedWallet.slice(0,6) + '...' + connectedWallet.slice(-4) + ' connected on Tempo';
+      document.getElementById('wallet-connected').innerHTML = '&#10003; ' + connectedWallet.slice(0,6) + '...' + connectedWallet.slice(-4) + ' connected on Tempo';
       document.getElementById('connect-btn').style.display = 'none';
       document.getElementById('pay-btn').style.display = 'block';
       setStatus('Ready to pay on Tempo Testnet', 'success');
@@ -168,13 +165,10 @@
       const amountWei = ethers.parseEther('0.001');
       const tx = await signer.sendTransaction({
         to: invoice.wallet,
-        value: amountWei,
+        value: amountWei
       });
       setStatus('Transaction sent! Waiting for confirmation...', 'loading');
       await tx.wait();
-      const invoices = JSON.parse(localStorage.getItem('nexuspay_invoices') || '[]');
-      const inv = invoices.find(i => i.id === invoice.id);
-      if (inv) { inv.status = 'paid'; inv.txHash = tx.hash; localStorage.setItem('nexuspay_invoices', JSON.stringify(invoices)); }
       showSuccess(tx.hash, invoice.amount);
     } catch(e) {
       btn.disabled = false;
