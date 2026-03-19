@@ -1,9 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Nexus Pay — Dashboard</title>
+  <head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <!-- Base.dev verification & attribution -->
+    <meta name="base:app_id" content="69a9396d0050dd24efcc1e16" />
+    <meta name="base:builder_code" content="bc_5s50punj" />
+    <title>Nexus Pay — Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
   <style>
@@ -50,6 +53,9 @@
     .stat-value.green { color: var(--green); }
     .stat-value.accent { color: var(--accent); }
     .stat-value.tempo { color: var(--tempo); font-size: 16px; margin-top: 8px; }
+    .network-badge { display: inline-flex; align-items: center; gap: 6px; }
+    .network-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
     .header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
     .section-title { font-size: 22px; font-weight: 800; letter-spacing: -1px; }
     .invoices { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 2px; }
@@ -69,6 +75,8 @@
     .btn-view { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
     .btn-view:hover { background: #fff; border-color: #fff; }
     .tx-hash { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--tempo); margin-top: 8px; word-break: break-all; }
+    .tx-hash a { color: var(--tempo); text-decoration: none; }
+    .tx-hash a:hover { text-decoration: underline; }
     .empty { grid-column: 1/-1; text-align: center; padding: 80px 24px; border: 1px dashed var(--border); }
     .empty-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; color: var(--muted); }
     .empty-sub { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--muted); }
@@ -105,7 +113,12 @@
     <div class="stat"><div class="stat-label">// Total Collected</div><div class="stat-value green" id="total-collected">$0.00</div></div>
     <div class="stat"><div class="stat-label">// Active Links</div><div class="stat-value accent" id="active-links">0</div></div>
     <div class="stat"><div class="stat-label">// Paid Invoices</div><div class="stat-value" id="paid-count">0</div></div>
-    <div class="stat"><div class="stat-label">// Network</div><div class="stat-value tempo">Tempo Testnet ●</div></div>
+    <div class="stat">
+      <div class="stat-label">// Network</div>
+      <div class="stat-value tempo">
+        <div class="network-badge"><div class="network-dot"></div>Tempo Mainnet</div>
+      </div>
+    </div>
   </div>
   <div class="header-row">
     <div class="section-title">Your Payment Links</div>
@@ -116,7 +129,7 @@
 <!-- MODAL -->
 <div class="modal-overlay" id="modal">
   <div class="modal">
-    <div class="modal-title">New Payment Link <button class="modal-close" onclick="closeModal()">✕</button></div>
+    <div class="modal-title">New Payment Link <button class="modal-close" onclick="closeModal()">&times;</button></div>
     <div class="form-group"><label>Your Name / Business</label><input type="text" id="merchant-name" placeholder="e.g. Alex Rivera"/></div>
     <div class="form-group"><label>Description</label><input type="text" id="invoice-desc" placeholder="e.g. Brand Design — Q1 2026"/></div>
     <div class="form-group">
@@ -124,19 +137,23 @@
       <div class="amount-row"><input type="number" id="invoice-amount" placeholder="500" style="border-right:none;"/><div class="currency-tag">USDC</div></div>
     </div>
     <div class="form-group"><label>Your Wallet Address</label><input type="text" id="merchant-wallet" placeholder="0x..."/></div>
-    <button class="submit-btn" onclick="createInvoice()">→ Generate Payment Link</button>
+    <button class="submit-btn" onclick="createInvoice()">&#8594; Generate Payment Link</button>
   </div>
 </div>
 <div class="toast" id="toast"></div>
 
 <script>
+  // ✅ TEMPO MAINNET CONFIG
   const TEMPO_CHAIN = {
-    chainId: '0x1860E',
-    chainName: 'Tempo Testnet',
-    nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-    rpcUrls: ['https://tempo-testnet.g.alchemy.com/v2/xFx5cUCJPyHB5_aJx6XpG'],
-    blockExplorerUrls: ['https://explorer.testnet.tempo.xyz']
+    chainId: '0x1079',         // 4217 decimal = Tempo Mainnet
+    chainName: 'Tempo Mainnet',
+    nativeCurrency: { name: 'USD', symbol: 'USD', decimals: 18 },
+    rpcUrls: ['https://rpc.tempo.xyz'],
+    blockExplorerUrls: ['https://explore.tempo.xyz']
   };
+
+  // ✅ USDC on Tempo Mainnet (TIP-20 native USDC)
+  const USDC_ADDRESS = '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238';
 
   let invoices = JSON.parse(localStorage.getItem('nexuspay_invoices') || '[]');
   let connectedWallet = null;
@@ -149,14 +166,14 @@
       try {
         await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [TEMPO_CHAIN] });
         await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: TEMPO_CHAIN.chainId }] });
-      } catch(e) { console.log('Chain:', e.message); }
+      } catch(e) { console.log('Chain switch:', e.message); }
       document.getElementById('wallet-btn').textContent = 'Connected';
       document.getElementById('wallet-btn').classList.add('connected');
       const addrEl = document.getElementById('wallet-addr');
       addrEl.style.display = 'block';
       addrEl.textContent = connectedWallet.slice(0,6) + '...' + connectedWallet.slice(-4);
       document.getElementById('merchant-wallet').value = connectedWallet;
-      showToast('✓ Connected to Tempo Testnet!');
+      showToast('✔ Connected to Tempo Mainnet!');
     } catch(e) { showToast('Failed: ' + e.message, true); }
   }
 
@@ -167,7 +184,12 @@
     const wallet = document.getElementById('merchant-wallet').value.trim();
     if (!name || !desc || !amount || !wallet) { showToast('Fill all fields!', true); return; }
     const id = Math.random().toString(36).slice(2, 10).toUpperCase();
-    invoices.unshift({ id, name, desc, amount, wallet, status: 'pending', date: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}), txHash: null });
+    invoices.unshift({
+      id, name, desc, amount, wallet,
+      status: 'pending',
+      date: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),
+      txHash: null
+    });
     saveAndRender(); closeModal(); showToast('Payment link created!');
     ['merchant-name','invoice-desc','invoice-amount','merchant-wallet'].forEach(i => document.getElementById(i).value = '');
   }
@@ -182,11 +204,11 @@
       <div class="invoice-card">
         <div class="card-top"><span class="status-badge ${inv.status}">${inv.status}</span><span class="card-date">${inv.date}</span></div>
         <div class="card-amount">$${parseFloat(inv.amount).toFixed(2)}</div>
-        <div class="card-desc">${inv.desc} · ${inv.name}</div>
-        ${inv.txHash ? `<div class="tx-hash">tx: ${inv.txHash}</div>` : ''}
+        <div class="card-desc">${inv.desc} &middot; ${inv.name}</div>
+        ${inv.txHash ? `<div class="tx-hash">tx: <a href="https://explore.tempo.xyz/tx/${inv.txHash}" target="_blank">${inv.txHash.slice(0,20)}...</a></div>` : ''}
         <div class="card-actions">
           <button class="btn-copy" onclick="copyLink('${inv.id}')">Copy Link</button>
-          <button class="btn-view" onclick="window.open('pay.html?id=${inv.id}','_blank')">Pay Page ↗</button>
+          <button class="btn-view" onclick="window.open('pay.html?id=${inv.id}','_blank')">Pay Page &#8599;</button>
         </div>
       </div>`).join('');
     const paid = invoices.filter(i => i.status === 'paid');
@@ -209,7 +231,7 @@
   const p = new URLSearchParams(window.location.search);
   if (p.get('paid')) {
     const inv = invoices.find(i => i.id === p.get('paid'));
-    if (inv) { inv.status = 'paid'; inv.txHash = p.get('tx') || 'confirmed'; saveAndRender(); showToast('✓ Payment confirmed on Tempo!'); }
+    if (inv) { inv.status = 'paid'; inv.txHash = p.get('tx') || 'confirmed'; saveAndRender(); showToast('✔ Payment confirmed on Tempo Mainnet!'); }
     history.replaceState({}, '', location.pathname);
   }
 

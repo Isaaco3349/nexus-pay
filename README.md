@@ -37,13 +37,13 @@ The payer clicks, picks their preferred chain, confirms — done. The merchant s
 
 ## Supported Payment Rails
 
-| Chain | Best For | Asset |
-|-------|----------|-------|
-| **Tempo** | Institutional & B2B payments | USDC |
-| **Base** | Retail & social payments | USDC / ETH |
-| **Arc** | Native USDC speed | USDC |
-| **Solana** | Micropayments & point-of-sale | USDC |
-| **Sui** | High-frequency transactions | USDC |
+| Chain | Status | Best For | Asset |
+|-------|--------|----------|-------|
+| **Tempo** | ✅ Mainnet Live | Institutional & B2B payments | USDC |
+| **Base** | ✅ Mainnet Live | Retail & social payments | USDC |
+| **Arc** | 🟡 Testnet | Native USDC speed | USDC |
+| **Solana** | 🔜 Coming Soon | Micropayments & point-of-sale | USDC |
+| **Sui** | 🔜 Coming Soon | High-frequency transactions | USDC |
 
 ### Why Tempo is the Core Rail
 
@@ -52,9 +52,18 @@ Tempo — built by Stripe and Paradigm — is purpose-built for stablecoins in t
 - Institutional-grade finality
 - Stripe's compliance infrastructure
 - Native USDC support with real-world settlement
-- Agentic payment compatibility for the AI economy
+- Agentic payment compatibility via MPP (Machine Payments Protocol)
 
 Tempo is the backbone. Every other chain is an on-ramp.
+
+### Network Details
+
+| Property | Tempo Mainnet | Base Mainnet | Arc Testnet |
+|----------|--------------|--------------|-------------|
+| **Chain ID** | 4217 | 8453 | 5042002 |
+| **RPC** | https://rpc.tempo.xyz | https://mainnet.base.org | https://rpc.testnet.arc.network |
+| **Explorer** | https://explore.tempo.xyz | https://basescan.org | https://testnet.arcscan.app |
+| **USDC** | 0x1c7D4B196... | 0x833589fCD6... | Native |
 
 ---
 
@@ -65,7 +74,7 @@ Tempo is the backbone. Every other chain is an on-ramp.
 - **Real-time Settlement** — funds arrive in your wallet, not a custodial account
 - **No Sign-up for Payers** — payers just connect wallet and pay
 - **Dashboard** — track all invoices, payment status, and history
-- **Webhook Support** — integrate payment events into your own app or agent
+- **Real USDC Transfers** — ERC-20 token transfers on all supported chains
 
 ---
 
@@ -94,37 +103,37 @@ Tempo is the backbone. Every other chain is an on-ramp.
 
 ## Tech Stack
 
-- **Frontend**: React + Vite
-- **Smart Contracts**: Solidity (EVM) / Tempo SDK
-- **Payment Rails**: Tempo, Base, Arc, Solana, Sui
-- **Stablecoin**: USDC (primary)
-- **Wallet Connection**: Wagmi + RainbowKit
-- **Backend**: Node.js / serverless functions
-- **Storage**: IPFS (invoice metadata)
+- **Frontend**: HTML / CSS / JavaScript (vanilla)
+- **Wallet Connection**: MetaMask / window.ethereum (ethers.js v6)
+- **Payment Rails**: Tempo Mainnet, Base Mainnet, Arc Testnet
+- **Stablecoin**: USDC (ERC-20 native transfer)
+- **Storage**: localStorage (invoice state)
+- **Explorer**: https://explore.tempo.xyz
 
 ---
 
 ## Roadmap
 
 - [x] Payment link generation UI
-- [x] Multi-chain checkout flow (prototype)
-- [ ] Tempo mainnet integration
+- [x] Multi-chain checkout flow
+- [x] Tempo Mainnet integration (live March 18, 2026)
+- [x] Base Mainnet integration
+- [x] Arc Testnet integration
+- [x] Real USDC ERC-20 transfers (not demo)
+- [x] Base builder attribution (base:builder_code)
 - [ ] Webhook + API for developers
 - [ ] Mobile-optimized payer experience
-- [ ] Agent-to-agent payment protocol
-- [ ] Fiat off-ramp via Stripe (leveraging Tempo × Stripe infrastructure)
-
----
-
-## Why This Wins at a Tempo Hackathon
-
-Nexus Pay isn't just built *on* Tempo — it's built *for* what Tempo was designed to solve. Stripe and Paradigm built Tempo to make stablecoins work in the real world. Nexus Pay is the UX layer that makes that real for millions of users who need to get paid globally, today.
+- [ ] Agent-to-agent payment protocol via MPP
+- [ ] Arc Mainnet upgrade (when live)
+- [ ] Fiat off-ramp via Stripe (leveraging Tempo x Stripe infrastructure)
 
 ---
 
 ## Builder
 
-Solo builder. Prev: MetricFlow (on-chain analytics, Base). Now going full payments.
+Solo builder. Prev: MetricFlow (on-chain Farcaster analytics, Base). Now going full payments on Tempo.
+
+Base Builder: `bc_5s50punj`
 
 ---
 

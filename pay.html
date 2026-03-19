@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <!-- Base.dev verification & attribution -->
+  <meta name="base:app_id" content="69a9396d0050dd24efcc1e16" />
+  <meta name="base:builder_code" content="bc_5s50punj" />
   <title>Nexus Pay — Payment</title>
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
@@ -20,8 +23,12 @@
       background-size: 48px 48px; pointer-events: none; z-index: 0;
     }
     .card { position: relative; z-index: 1; background: var(--surface); border: 1px solid var(--border); width: 100%; max-width: 480px; padding: 40px; }
-    .powered-by { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 32px; display: flex; align-items: center; gap: 8px; }
+    .powered-by { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 32px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .powered-by span { color: var(--accent); }
+    .live-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; animation: pulse 2s infinite; flex-shrink: 0; }
+    .live-dot.green { background: var(--green); }
+    .live-dot.yellow { background: var(--yellow); }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
     .invoice-amount { font-size: 56px; font-weight: 800; letter-spacing: -3px; line-height: 1; margin-bottom: 4px; }
     .invoice-currency { font-family: 'Space Mono', monospace; font-size: 14px; color: var(--accent); letter-spacing: 2px; margin-bottom: 8px; }
     .invoice-desc { font-size: 15px; color: var(--muted); margin-bottom: 4px; }
@@ -31,14 +38,18 @@
     .chains { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
     .chain-opt { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: 1px solid var(--border); background: var(--bg); cursor: pointer; transition: all 0.15s; font-family: 'Space Mono', monospace; font-size: 12px; }
     .chain-opt:hover, .chain-opt.active { border-color: var(--accent); background: rgba(0,229,255,0.04); }
+    .chain-opt.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
     .chain-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
     .chain-dot.tempo { background: var(--tempo); }
     .chain-dot.base { background: #0052ff; }
+    .chain-dot.arc { background: var(--accent); }
     .chain-dot.solana { background: #9945ff; }
     .chain-dot.sui { background: #4da2ff; }
-    .chain-dot.arc { background: var(--accent); }
     .chain-name { flex: 1; color: var(--text); }
     .chain-tag { font-size: 9px; color: var(--muted); letter-spacing: 1px; }
+    .chain-badge { font-size: 8px; padding: 2px 6px; border: 1px solid; border-radius: 2px; letter-spacing: 1px; }
+    .chain-badge.live { color: var(--green); border-color: var(--green); }
+    .chain-badge.testnet { color: var(--yellow); border-color: var(--yellow); }
     .connect-btn, .pay-btn {
       width: 100%; font-family: 'Space Mono', monospace; font-weight: 700; font-size: 12px;
       letter-spacing: 2px; text-transform: uppercase; padding: 16px; border: none; cursor: pointer; transition: all 0.2s;
@@ -53,18 +64,14 @@
     .status-msg.success { color: var(--green); }
     .status-msg.error { color: var(--red); }
     .status-msg.loading { color: var(--yellow); }
-
-    /* SUCCESS */
-    .success-screen { display: none; text-align: center; }
-    .success-screen.show { display: block; }
-    .card.success-card { border-color: var(--green); }
     .success-icon { font-size: 48px; margin-bottom: 16px; }
     .success-title { font-size: 40px; font-weight: 800; color: var(--green); letter-spacing: -2px; margin-bottom: 8px; }
     .success-sub { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--muted); margin-bottom: 24px; }
     .tx-link { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--tempo); word-break: break-all; padding: 12px; border: 1px solid var(--border); margin-bottom: 24px; }
+    .tx-link a { color: var(--tempo); text-decoration: none; }
+    .tx-link a:hover { text-decoration: underline; }
     .back-btn { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); background: transparent; border: 1px solid var(--border); padding: 10px 24px; cursor: pointer; letter-spacing: 1px; text-transform: uppercase; }
     .back-btn:hover { border-color: var(--accent); color: var(--accent); }
-
     .not-found { text-align: center; }
     .not-found-title { font-size: 32px; font-weight: 800; color: var(--red); margin-bottom: 8px; }
     .not-found-sub { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--muted); }
@@ -74,7 +81,12 @@
 
 <!-- PAYMENT CARD -->
 <div class="card" id="pay-card">
-  <div class="powered-by">Powered by <span>NEXUS.PAY</span> · Tempo Testnet</div>
+  <div class="powered-by" id="powered-by-label">
+    Powered by <span>NEXUS.PAY</span> &middot;
+    <span style="display:inline-flex;align-items:center;gap:4px;color:var(--green);">
+      <div class="live-dot green"></div> Tempo Mainnet
+    </span>
+  </div>
 
   <div id="invoice-view">
     <div class="invoice-amount" id="pay-amount">—</div>
@@ -84,25 +96,45 @@
     <hr class="divider"/>
     <div class="chain-label">// Select payment rail</div>
     <div class="chains">
+      <!-- TEMPO MAINNET -->
       <div class="chain-opt active" onclick="selectChain(this,'tempo')" data-chain="tempo">
-        <div class="chain-dot tempo"></div><div class="chain-name">Tempo</div><div class="chain-tag">INSTITUTIONAL · STRIPE INFRA</div>
+        <div class="chain-dot tempo"></div>
+        <div class="chain-name">Tempo</div>
+        <div class="chain-tag">MAINNET &middot; STRIPE INFRA</div>
+        <span class="chain-badge live">LIVE</span>
       </div>
+      <!-- BASE MAINNET -->
       <div class="chain-opt" onclick="selectChain(this,'base')" data-chain="base">
-        <div class="chain-dot base"></div><div class="chain-name">Base</div><div class="chain-tag">RETAIL · SOCIAL</div>
+        <div class="chain-dot base"></div>
+        <div class="chain-name">Base</div>
+        <div class="chain-tag">MAINNET &middot; COINBASE</div>
+        <span class="chain-badge live">LIVE</span>
       </div>
+      <!-- ARC TESTNET -->
       <div class="chain-opt" onclick="selectChain(this,'arc')" data-chain="arc">
-        <div class="chain-dot arc"></div><div class="chain-name">Arc</div><div class="chain-tag">NATIVE USDC · FAST</div>
+        <div class="chain-dot arc"></div>
+        <div class="chain-name">Arc</div>
+        <div class="chain-tag">CIRCLE L1 &middot; NATIVE USDC</div>
+        <span class="chain-badge testnet">TESTNET</span>
       </div>
-      <div class="chain-opt" onclick="selectChain(this,'solana')" data-chain="solana">
-        <div class="chain-dot solana"></div><div class="chain-name">Solana</div><div class="chain-tag">MICROPAYMENTS · POS</div>
+      <!-- SOLANA (coming soon) -->
+      <div class="chain-opt disabled" data-chain="solana">
+        <div class="chain-dot solana"></div>
+        <div class="chain-name">Solana</div>
+        <div class="chain-tag">MICROPAYMENTS &middot; POS</div>
+        <span class="chain-badge" style="color:var(--muted);border-color:var(--muted);">SOON</span>
       </div>
-      <div class="chain-opt" onclick="selectChain(this,'sui')" data-chain="sui">
-        <div class="chain-dot sui"></div><div class="chain-name">Sui</div><div class="chain-tag">HIGH-FREQUENCY</div>
+      <!-- SUI (coming soon) -->
+      <div class="chain-opt disabled" data-chain="sui">
+        <div class="chain-dot sui"></div>
+        <div class="chain-name">Sui</div>
+        <div class="chain-tag">HIGH-FREQUENCY</div>
+        <span class="chain-badge" style="color:var(--muted);border-color:var(--muted);">SOON</span>
       </div>
     </div>
     <div class="wallet-connected" id="wallet-connected"></div>
     <button class="connect-btn" id="connect-btn" onclick="connectAndPay()">Connect Wallet</button>
-    <button class="pay-btn" id="pay-btn" onclick="sendPayment()">✓ Pay Now</button>
+    <button class="pay-btn" id="pay-btn" onclick="sendPayment()">&#10003; Pay Now</button>
     <div class="status-msg" id="status-msg"></div>
   </div>
 
@@ -113,31 +145,62 @@
 </div>
 
 <!-- SUCCESS SCREEN -->
-<div class="card success-card" id="success-card" style="display:none; max-width:480px; width:100%; text-align:center; padding:40px;">
-  <div class="success-icon">✓</div>
+<div class="card" id="success-card" style="display:none; max-width:480px; width:100%; text-align:center; padding:40px; border-color: var(--green);">
+  <div class="success-icon">&#10003;</div>
   <div class="success-title">PAID</div>
-  <div class="success-sub" id="success-sub">Payment confirmed on Tempo Testnet</div>
+  <div class="success-sub" id="success-sub"></div>
   <div class="tx-link" id="tx-link"></div>
-  <button class="back-btn" onclick="goBack()">← Back to Nexus Pay</button>
+  <button class="back-btn" onclick="goBack()">&#8592; Back to Nexus Pay</button>
 </div>
 
 <script>
-  const TEMPO_CHAIN = {
-    chainId: '0xA5BF', // 42431 in hex
-    chainName: 'Tempo Testnet',
-    nativeCurrency: { name: 'USD', symbol: 'USD', decimals: 18 },
-    rpcUrls: ['https://rpc.moderato.tempo.xyz'],
-    blockExplorerUrls: ['https://explorer.moderato.tempo.xyz']
+  // ─── CHAIN CONFIGS ───────────────────────────────────────────────
+  const CHAINS = {
+    tempo: {
+      chainId: '0x1079',             // 4217 — Tempo Mainnet
+      chainName: 'Tempo Mainnet',
+      nativeCurrency: { name: 'USD', symbol: 'USD', decimals: 18 },
+      rpcUrls: ['https://rpc.tempo.xyz'],
+      blockExplorerUrls: ['https://explore.tempo.xyz'],
+      usdcAddress: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
+      explorerTx: 'https://explore.tempo.xyz/tx/',
+      label: 'Tempo Mainnet'
+    },
+    base: {
+      chainId: '0x2105',             // 8453 — Base Mainnet
+      chainName: 'Base Mainnet',
+      nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+      rpcUrls: ['https://mainnet.base.org'],
+      blockExplorerUrls: ['https://basescan.org'],
+      usdcAddress: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+      explorerTx: 'https://basescan.org/tx/',
+      label: 'Base Mainnet'
+    },
+    arc: {
+      chainId: '0x4CE252',           // 5042002 — Arc Testnet
+      chainName: 'Arc Testnet',
+      nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 },
+      rpcUrls: ['https://rpc.testnet.arc.network'],
+      blockExplorerUrls: ['https://testnet.arcscan.app'],
+      // Arc: USDC is native at system contract, ERC-20 interface uses 6 decimals
+      usdcAddress: '0x3600000000000000000000000000000000000000',
+      explorerTx: 'https://testnet.arcscan.app/tx/',
+      label: 'Arc Testnet'
+    }
   };
 
-  // USDC contract on Tempo testnet (use native ETH as fallback for testnet demo)
-  const USDC_TEMPO = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'; // Circle USDC
+  // Standard ERC-20 transfer ABI
+  const ERC20_ABI = [
+    'function transfer(address to, uint256 amount) returns (bool)',
+    'function balanceOf(address owner) view returns (uint256)',
+    'function decimals() view returns (uint8)'
+  ];
 
   let selectedChain = 'tempo';
   let connectedWallet = null;
   let invoice = null;
 
-  // Load invoice from localStorage
+  // ─── LOAD INVOICE ────────────────────────────────────────────────
   const urlParams = new URLSearchParams(window.location.search);
   const invoiceId = urlParams.get('id');
 
@@ -157,65 +220,110 @@
     }
   }
 
+  // ─── CHAIN SELECTOR ──────────────────────────────────────────────
   function selectChain(el, chain) {
     document.querySelectorAll('.chain-opt').forEach(o => o.classList.remove('active'));
     el.classList.add('active');
     selectedChain = chain;
+
+    // Update powered-by label
+    const cfg = CHAINS[chain];
+    const isTestnet = chain === 'arc';
+    const dotColor = isTestnet ? 'yellow' : 'green';
+    document.getElementById('powered-by-label').innerHTML =
+      `Powered by <span>NEXUS.PAY</span> &middot;
+       <span style="display:inline-flex;align-items:center;gap:4px;color:var(--${isTestnet ? 'yellow' : 'green'});">
+         <div class="live-dot ${dotColor}"></div> ${cfg.label}
+       </span>`;
+
+    // Reset wallet state if chain changed
+    if (connectedWallet) {
+      document.getElementById('connect-btn').style.display = 'block';
+      document.getElementById('pay-btn').style.display = 'none';
+      document.getElementById('wallet-connected').style.display = 'none';
+      connectedWallet = null;
+      setStatus('Chain changed — reconnect wallet', '');
+    }
   }
 
+  // ─── CONNECT WALLET ──────────────────────────────────────────────
   async function connectAndPay() {
     if (!window.ethereum) { setStatus('Please install MetaMask to pay!', 'error'); return; }
     try {
       setStatus('Connecting wallet...', 'loading');
       const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
       connectedWallet = accounts[0];
-      if (selectedChain === 'tempo') {
+
+      const cfg = CHAINS[selectedChain];
+      if (cfg) {
         try {
-          await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [TEMPO_CHAIN] });
-          await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: TEMPO_CHAIN.chainId }] });
+          await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [cfg] });
+          await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: cfg.chainId }] });
         } catch(e) { console.log('Chain switch:', e.message); }
       }
+
       document.getElementById('wallet-connected').style.display = 'block';
-      document.getElementById('wallet-connected').textContent = '✓ ' + connectedWallet.slice(0,6) + '...' + connectedWallet.slice(-4) + ' connected';
+      document.getElementById('wallet-connected').textContent = '✔ ' + connectedWallet.slice(0,6) + '...' + connectedWallet.slice(-4) + ' connected';
       document.getElementById('connect-btn').style.display = 'none';
       document.getElementById('pay-btn').style.display = 'block';
       setStatus('Wallet connected. Ready to pay!', 'success');
     } catch(e) { setStatus('Connection failed: ' + e.message, 'error'); }
   }
 
+  // ─── SEND PAYMENT ────────────────────────────────────────────────
   async function sendPayment() {
     if (!connectedWallet || !invoice) return;
     const payBtn = document.getElementById('pay-btn');
     payBtn.disabled = true;
     payBtn.textContent = 'Processing...';
-    setStatus('Sending transaction on Tempo Testnet...', 'loading');
+
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
-      // Send native ETH as payment demo (testnet)
-      // In production: use USDC ERC20 transfer
-      const amountWei = ethers.parseEther('0.001'); // Small testnet amount for demo
-      const tx = await signer.sendTransaction({
-        to: invoice.wallet,
-        value: amountWei,
-        data: ethers.hexlify(ethers.toUtf8Bytes('nexuspay:' + invoice.id))
-      });
+      const cfg = CHAINS[selectedChain];
+
+      setStatus(`Sending USDC on ${cfg.label}...`, 'loading');
+
+      // All three chains use ERC-20 USDC transfer
+      const usdc = new ethers.Contract(cfg.usdcAddress, ERC20_ABI, signer);
+      const decimals = await usdc.decimals();
+      const amount = ethers.parseUnits(invoice.amount.toString(), decimals);
+      const tx = await usdc.transfer(invoice.wallet, amount);
+
       setStatus('Transaction sent! Waiting for confirmation...', 'loading');
       await tx.wait();
-      // Show success
-      document.getElementById('pay-card').style.display = 'none';
-      document.getElementById('success-card').style.display = 'block';
-      document.getElementById('success-sub').textContent = parseFloat(invoice.amount).toFixed(2) + ' USDC paid via ' + selectedChain.toUpperCase() + ' · Tempo Testnet';
-      document.getElementById('tx-link').textContent = 'tx: ' + tx.hash;
-      // Update invoice status back on dashboard
-      const invoices = JSON.parse(localStorage.getItem('nexuspay_invoices') || '[]');
-      const inv = invoices.find(i => i.id === invoice.id);
-      if (inv) { inv.status = 'paid'; inv.txHash = tx.hash; localStorage.setItem('nexuspay_invoices', JSON.stringify(invoices)); }
+      showSuccess(tx.hash, cfg);
+
     } catch(e) {
       payBtn.disabled = false;
-      payBtn.textContent = '✓ Pay Now';
+      payBtn.textContent = '✔ Pay Now';
       setStatus('Transaction failed: ' + e.message, 'error');
     }
+  }
+
+  // ─── SHOW SUCCESS ────────────────────────────────────────────────
+  function showSuccess(txHash, cfg) {
+    // Update invoice in localStorage
+    const invoices = JSON.parse(localStorage.getItem('nexuspay_invoices') || '[]');
+    const inv = invoices.find(i => i.id === invoice.id);
+    if (inv) {
+      inv.status = 'paid';
+      inv.txHash = txHash;
+      inv.paidChain = cfg.chainName;
+      localStorage.setItem('nexuspay_invoices', JSON.stringify(invoices));
+    }
+
+    document.getElementById('pay-card').style.display = 'none';
+    document.getElementById('success-card').style.display = 'block';
+    document.getElementById('success-sub').textContent =
+      parseFloat(invoice.amount).toFixed(2) + ' USDC paid via ' + cfg.chainName;
+    document.getElementById('tx-link').innerHTML =
+      'tx: <a href="' + cfg.explorerTx + txHash + '" target="_blank">' + txHash + '</a>';
+
+    // Redirect back to dashboard after 4s
+    setTimeout(() => {
+      window.location.href = 'index.html?paid=' + invoice.id + '&tx=' + txHash;
+    }, 4000);
   }
 
   function setStatus(msg, type='') {

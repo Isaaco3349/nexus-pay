@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <!-- Base.dev verification & attribution -->
+  <meta name="base:app_id" content="69a9396d0050dd24efcc1e16" />
+  <meta name="base:builder_code" content="bc_5s50punj" />
   <title>Nexus Pay — Borderless Billing Protocol</title>
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
   <style>
@@ -34,7 +37,6 @@
       overflow-x: hidden;
     }
 
-    /* GRID BACKGROUND */
     body::before {
       content: '';
       position: fixed;
@@ -47,7 +49,6 @@
       z-index: 0;
     }
 
-    /* GLOW ORBS */
     .orb {
       position: fixed;
       border-radius: 50%;
@@ -59,7 +60,6 @@
     .orb-1 { width: 600px; height: 600px; background: var(--accent2); top: -200px; right: -100px; }
     .orb-2 { width: 500px; height: 500px; background: var(--accent); bottom: -100px; left: -100px; }
 
-    /* NAV */
     nav {
       position: fixed;
       top: 0; left: 0; right: 0;
@@ -85,15 +85,24 @@
     .nav-badge {
       font-family: 'Space Mono', monospace;
       font-size: 11px;
-      color: var(--accent);
-      border: 1px solid var(--accent);
+      color: var(--green);
+      border: 1px solid var(--green);
       padding: 4px 10px;
       border-radius: 2px;
       letter-spacing: 1px;
       text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
+    .nav-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
 
-    /* HERO */
     .hero {
       position: relative;
       z-index: 1;
@@ -182,10 +191,11 @@
       letter-spacing: 1px;
       text-transform: uppercase;
       transition: all 0.2s;
+      text-decoration: none;
+      display: inline-block;
     }
     .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
 
-    /* CHAINS */
     .chains-bar {
       position: relative;
       z-index: 1;
@@ -210,11 +220,9 @@
     }
     .chain-pill.tempo  { color: var(--tempo);  border-color: var(--tempo);  background: rgba(99,91,255,0.08); }
     .chain-pill.base   { color: var(--base);   border-color: var(--base);   background: rgba(0,82,255,0.08); }
-    .chain-pill.solana { color: var(--solana); border-color: var(--solana); background: rgba(153,69,255,0.08); }
-    .chain-pill.sui    { color: var(--sui);    border-color: var(--sui);    background: rgba(77,162,255,0.08); }
     .chain-pill.arc    { color: var(--arc);    border-color: var(--arc);    background: rgba(0,229,255,0.08); }
+    .chain-pill.soon   { color: var(--muted);  border-color: var(--border); background: transparent; opacity: 0.5; }
 
-    /* DEMO SECTION */
     section {
       position: relative;
       z-index: 1;
@@ -240,7 +248,6 @@
       line-height: 1.1;
     }
 
-    /* DEMO APP */
     .demo-wrapper {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -251,6 +258,8 @@
 
     @media (max-width: 768px) {
       .demo-wrapper { grid-template-columns: 1fr; }
+      nav { padding: 16px 24px; }
+      footer { flex-direction: column; gap: 12px; text-align: center; }
     }
 
     .demo-panel {
@@ -272,15 +281,12 @@
     .panel-title::before {
       content: '';
       display: block;
-      width: 6px;
-      height: 6px;
+      width: 6px; height: 6px;
       background: var(--accent);
       border-radius: 50%;
     }
 
-    .form-group {
-      margin-bottom: 20px;
-    }
+    .form-group { margin-bottom: 20px; }
 
     label {
       display: block;
@@ -292,7 +298,7 @@
       margin-bottom: 8px;
     }
 
-    input, select, textarea {
+    input, select {
       width: 100%;
       background: var(--bg);
       border: 1px solid var(--border);
@@ -303,13 +309,9 @@
       outline: none;
       transition: border-color 0.2s;
     }
-    input:focus, select:focus, textarea:focus { border-color: var(--accent); }
-    select option { background: var(--bg); }
+    input:focus, select:focus { border-color: var(--accent); }
 
-    .amount-row {
-      display: flex;
-      gap: 2px;
-    }
+    .amount-row { display: flex; gap: 2px; }
     .currency-badge {
       background: var(--border);
       border: 1px solid var(--border);
@@ -338,13 +340,6 @@
       clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
     }
     .generate-btn:hover { background: #fff; }
-
-    /* CHECKOUT PREVIEW */
-    .checkout-preview {
-      display: flex;
-      flex-direction: column;
-      gap: 0;
-    }
 
     .invoice-card {
       background: var(--bg);
@@ -400,27 +395,24 @@
       border-color: var(--accent);
       background: rgba(0,229,255,0.04);
     }
-    .chain-option.active { border-color: var(--accent); }
-
-    .chain-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      flex-shrink: 0;
+    .chain-option.disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      pointer-events: none;
     }
+
+    .chain-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .chain-dot.tempo  { background: var(--tempo); }
+    .chain-dot.base   { background: var(--base); }
+    .chain-dot.arc    { background: var(--arc); }
+    .chain-dot.solana { background: var(--solana); }
+    .chain-dot.sui    { background: var(--sui); }
 
     .chain-option-name { flex: 1; color: var(--text); }
-    .chain-option-tag {
-      font-size: 10px;
-      color: var(--muted);
-      letter-spacing: 1px;
-    }
-
-    .chain-option .chain-dot.tempo  { background: var(--tempo); }
-    .chain-option .chain-dot.base   { background: var(--base); }
-    .chain-option .chain-dot.solana { background: var(--solana); }
-    .chain-option .chain-dot.sui    { background: var(--sui); }
-    .chain-option .chain-dot.arc    { background: var(--arc); }
+    .chain-option-tag { font-size: 10px; color: var(--muted); letter-spacing: 1px; }
+    .chain-badge { font-size: 8px; padding: 2px 6px; border: 1px solid; border-radius: 2px; letter-spacing: 1px; }
+    .chain-badge.live { color: var(--green); border-color: var(--green); }
+    .chain-badge.testnet { color: var(--yellow); border-color: var(--yellow); }
 
     .pay-btn {
       width: 100%;
@@ -439,7 +431,6 @@
     }
     .pay-btn:hover { background: #fff; }
 
-    /* SUCCESS STATE */
     .success-overlay {
       display: none;
       position: fixed;
@@ -455,8 +446,7 @@
     .success-overlay.show { display: flex; }
 
     .success-icon {
-      width: 80px;
-      height: 80px;
+      width: 80px; height: 80px;
       border-radius: 50%;
       background: rgba(0,255,178,0.1);
       border: 2px solid var(--green);
@@ -466,19 +456,8 @@
       font-size: 32px;
     }
 
-    .success-title {
-      font-size: 48px;
-      font-weight: 800;
-      letter-spacing: -2px;
-      color: var(--green);
-    }
-
-    .success-sub {
-      font-family: 'Space Mono', monospace;
-      font-size: 13px;
-      color: var(--muted);
-      letter-spacing: 1px;
-    }
+    .success-title { font-size: 48px; font-weight: 800; letter-spacing: -2px; color: var(--green); }
+    .success-sub { font-family: 'Space Mono', monospace; font-size: 13px; color: var(--muted); letter-spacing: 1px; }
 
     .success-close {
       font-family: 'Space Mono', monospace;
@@ -493,7 +472,6 @@
       text-transform: uppercase;
     }
 
-    /* LINK PREVIEW */
     .link-preview {
       display: none;
       margin-top: 16px;
@@ -504,17 +482,11 @@
       font-size: 12px;
       color: var(--accent);
       word-break: break-all;
-      position: relative;
+      cursor: pointer;
     }
     .link-preview.show { display: block; }
-    .copy-hint {
-      font-size: 10px;
-      color: var(--muted);
-      margin-top: 6px;
-      letter-spacing: 1px;
-    }
+    .copy-hint { font-size: 10px; color: var(--muted); margin-top: 6px; letter-spacing: 1px; }
 
-    /* HOW IT WORKS */
     .steps {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -523,10 +495,7 @@
       margin-top: 48px;
     }
 
-    .step {
-      background: var(--surface);
-      padding: 32px 28px;
-    }
+    .step { background: var(--surface); padding: 32px 28px; }
 
     .step-num {
       font-family: 'Space Mono', monospace;
@@ -537,20 +506,9 @@
       margin-bottom: 20px;
     }
 
-    .step-title {
-      font-size: 18px;
-      font-weight: 700;
-      margin-bottom: 10px;
-      letter-spacing: -0.5px;
-    }
+    .step-title { font-size: 18px; font-weight: 700; margin-bottom: 10px; letter-spacing: -0.5px; }
+    .step-desc { font-size: 14px; color: var(--muted); line-height: 1.6; }
 
-    .step-desc {
-      font-size: 14px;
-      color: var(--muted);
-      line-height: 1.6;
-    }
-
-    /* FOOTER */
     footer {
       position: relative;
       z-index: 1;
@@ -561,26 +519,15 @@
       justify-content: space-between;
     }
 
-    .footer-logo {
-      font-family: 'Space Mono', monospace;
-      font-size: 14px;
-      color: var(--muted);
-    }
+    .footer-logo { font-family: 'Space Mono', monospace; font-size: 14px; color: var(--muted); }
     .footer-logo span { color: var(--accent); }
-
-    .footer-note {
-      font-family: 'Space Mono', monospace;
-      font-size: 11px;
-      color: var(--muted);
-      letter-spacing: 1px;
-    }
+    .footer-note { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 1px; }
 
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(20px); }
       to   { opacity: 1; transform: translateY(0); }
     }
 
-    /* SCROLLBAR */
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: var(--bg); }
     ::-webkit-scrollbar-thumb { background: var(--border); }
@@ -594,7 +541,7 @@
 <!-- NAV -->
 <nav>
   <div class="logo">NEXUS<span>.</span>PAY</div>
-  <div class="nav-badge">Tempo Hackathon 2026</div>
+  <div class="nav-badge"><div class="nav-dot"></div>Tempo Mainnet Live</div>
 </nav>
 
 <!-- HERO -->
@@ -605,23 +552,23 @@
     <span class="line-2">Any chain. Zero friction.</span>
   </h1>
   <p class="hero-sub">
-    Create a payment link in 10 seconds. Your payer chooses the chain. 
+    Create a payment link in 10 seconds. Your payer chooses the chain.
     You receive USDC directly to your wallet. No banks. No intermediaries. No waiting.
   </p>
   <div class="cta-row">
     <button class="btn-primary" onclick="document.getElementById('demo').scrollIntoView({behavior:'smooth'})">
       Try the Demo
     </button>
-    <button class="btn-secondary" onclick="window.open('https://github.com','_blank')">
+    <a class="btn-secondary" href="https://github.com/havertz/nexus-pay" target="_blank">
       View on GitHub
-    </button>
+    </a>
   </div>
   <div class="chains-bar">
-    <div class="chain-pill tempo">Tempo</div>
-    <div class="chain-pill base">Base</div>
-    <div class="chain-pill solana">Solana</div>
-    <div class="chain-pill sui">Sui</div>
-    <div class="chain-pill arc">Arc</div>
+    <div class="chain-pill tempo">Tempo &mdash; Live</div>
+    <div class="chain-pill base">Base &mdash; Live</div>
+    <div class="chain-pill arc">Arc &mdash; Testnet</div>
+    <div class="chain-pill soon">Solana &mdash; Soon</div>
+    <div class="chain-pill soon">Sui &mdash; Soon</div>
   </div>
 </div>
 
@@ -655,11 +602,11 @@
 
       <div class="form-group">
         <label>Your Wallet Address</label>
-        <input type="text" id="wallet" placeholder="0x..." value="0xf39F...2266"/>
+        <input type="text" id="wallet" placeholder="0x..."/>
       </div>
 
       <button class="generate-btn" onclick="generateLink()">
-        → Generate Payment Link
+        &#8594; Generate Payment Link
       </button>
 
       <div class="link-preview" id="link-preview">
@@ -674,41 +621,49 @@
 
       <div class="invoice-card">
         <div class="invoice-amount" id="preview-amount">$500 USDC</div>
-        <div class="invoice-meta" id="preview-meta">BRAND DESIGN — Q1 2026 · FROM ALEX RIVERA</div>
+        <div class="invoice-meta" id="preview-meta">BRAND DESIGN &mdash; Q1 2026 &middot; FROM ALEX RIVERA</div>
       </div>
 
       <div class="chain-select-label">// Select payment rail</div>
-      <div class="chain-options" id="chain-options">
-        <div class="chain-option active" onclick="selectChain(this, 'TEMPO')" data-chain="TEMPO">
+      <div class="chain-options">
+        <!-- TEMPO MAINNET -->
+        <div class="chain-option active" onclick="selectChain(this,'TEMPO')" data-chain="TEMPO">
           <div class="chain-dot tempo"></div>
           <div class="chain-option-name">Tempo</div>
-          <div class="chain-option-tag">INSTITUTIONAL · STRIPE INFRA</div>
+          <div class="chain-option-tag">MAINNET &middot; STRIPE INFRA</div>
+          <span class="chain-badge live">LIVE</span>
         </div>
-        <div class="chain-option" onclick="selectChain(this, 'BASE')" data-chain="BASE">
+        <!-- BASE MAINNET -->
+        <div class="chain-option" onclick="selectChain(this,'BASE')" data-chain="BASE">
           <div class="chain-dot base"></div>
           <div class="chain-option-name">Base</div>
-          <div class="chain-option-tag">RETAIL · SOCIAL</div>
+          <div class="chain-option-tag">MAINNET &middot; COINBASE</div>
+          <span class="chain-badge live">LIVE</span>
         </div>
-        <div class="chain-option" onclick="selectChain(this, 'ARC')" data-chain="ARC">
+        <!-- ARC TESTNET -->
+        <div class="chain-option" onclick="selectChain(this,'ARC')" data-chain="ARC">
           <div class="chain-dot arc"></div>
           <div class="chain-option-name">Arc</div>
-          <div class="chain-option-tag">NATIVE USDC · FAST</div>
+          <div class="chain-option-tag">CIRCLE L1 &middot; NATIVE USDC</div>
+          <span class="chain-badge testnet">TESTNET</span>
         </div>
-        <div class="chain-option" onclick="selectChain(this, 'SOLANA')" data-chain="SOLANA">
+        <!-- SOLANA SOON -->
+        <div class="chain-option disabled">
           <div class="chain-dot solana"></div>
           <div class="chain-option-name">Solana</div>
-          <div class="chain-option-tag">MICROPAYMENTS · POS</div>
+          <div class="chain-option-tag">MICROPAYMENTS &middot; POS</div>
+          <span class="chain-badge" style="color:var(--muted);border-color:var(--muted);">SOON</span>
         </div>
-        <div class="chain-option" onclick="selectChain(this, 'SUI')" data-chain="SUI">
+        <!-- SUI SOON -->
+        <div class="chain-option disabled">
           <div class="chain-dot sui"></div>
           <div class="chain-option-name">Sui</div>
           <div class="chain-option-tag">HIGH-FREQUENCY</div>
+          <span class="chain-badge" style="color:var(--muted);border-color:var(--muted);">SOON</span>
         </div>
       </div>
 
-      <button class="pay-btn" onclick="simulatePay()">
-        ✓ Pay Now
-      </button>
+      <button class="pay-btn" onclick="simulatePay()">&#10003; Pay Now</button>
     </div>
   </div>
 </section>
@@ -731,7 +686,7 @@
     <div class="step">
       <div class="step-num">03</div>
       <div class="step-title">Payer Chooses Rail</div>
-      <div class="step-desc">Payer picks their preferred chain — Tempo, Base, Solana, and more.</div>
+      <div class="step-desc">Payer picks their preferred chain &mdash; Tempo, Base, Arc, and more.</div>
     </div>
     <div class="step">
       <div class="step-num">04</div>
@@ -744,18 +699,16 @@
 <!-- FOOTER -->
 <footer>
   <div class="footer-logo">NEXUS<span>.</span>PAY</div>
-  <div class="footer-note">// Built for Tempo × Stripe Hackathon 2026</div>
+  <div class="footer-note">// Built on Tempo Mainnet &middot; Live March 2026</div>
 </footer>
 
 <!-- SUCCESS OVERLAY -->
 <div class="success-overlay" id="success-overlay">
-  <div class="success-icon">✓</div>
+  <div class="success-icon">&#10003;</div>
   <div class="success-title">PAID</div>
   <div class="success-sub" id="success-detail">500 USDC received via TEMPO</div>
-  <div class="success-sub" style="font-size:11px; margin-top: -8px;">// Invoice marked as settled</div>
-  <button class="success-close" onclick="document.getElementById('success-overlay').classList.remove('show')">
-    Close
-  </button>
+  <div class="success-sub" style="font-size:11px; margin-top:-8px;">// Invoice marked as settled</div>
+  <button class="success-close" onclick="document.getElementById('success-overlay').classList.remove('show')">Close</button>
 </div>
 
 <script>
@@ -773,7 +726,6 @@
     const desc = document.getElementById('description').value || 'Invoice';
     const id = Math.random().toString(36).slice(2, 9).toUpperCase();
 
-    // Update checkout preview
     document.getElementById('preview-amount').textContent = `$${amount} USDC`;
     document.getElementById('preview-meta').textContent =
       `${desc.toUpperCase()} · FROM ${name.toUpperCase()}`;
