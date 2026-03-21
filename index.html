@@ -338,7 +338,45 @@
     closeMarkModal();
     showToast('✔ Invoice marked as paid on ' + chain.toUpperCase() + '!');
   }
+// ✅ Auto-poll pending invoices every 30 seconds
+async function autoPollPendingInvoices() {
+  const pending = invoices.filter(i => i.status === 'pending');
+  if (!pending.length) return;
 
+  for (const inv of pending) {
+    const chains = ['base', 'tempo'];
+    for (const chain of chains) {
+      const explorer = EXPLORERS[chain];
+      if (!explorer.api) continue;
+      try {
+        const amountInUnits = Math.round(parseFloat(inv.amount) * 1000000);
+        const url = `${explorer.api}?module=account&action=tokentx&address=${inv.wallet}&sort=desc&offset=10`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.status === '1' && data.result) {
+          const match = data.result.find(tx =>
+            tx.to.toLowerCase() === inv.wallet.toLowerCase() &&
+            parseInt(tx.value) === amountInUnits
+          );
+          if (match) {
+            inv.status = 'paid';
+            inv.txHash = match.hash;
+            inv.explorerTx = explorer.tx;
+            inv.paidChain = chain;
+            saveAndRender();
+            showToast('✔ Payment auto-detected on ' + chain.toUpperCase() + '!');
+            break;
+          }
+        }
+      } catch(e) { console.log('Auto-poll error:', e); }
+    }
+  }
+}
+
+// Start auto-polling every 30 seconds
+setInterval(autoPollPendingInvoices, 30000);
+// Also run once immediately on load
+autoPollPendingInvoices();
   function renderInvoices() {
     const grid = document.getElementById('invoices-grid');
     if (!invoices.length) {
@@ -404,6 +442,8 @@
   }
 
   renderInvoices();
+  // Kick off auto-poll
+autoPollPendingInvoices();
 </script>
 </body>
 </html>
