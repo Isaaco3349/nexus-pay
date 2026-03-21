@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <!-- Base.dev verification & attribution -->
-    <meta name="base:app_id" content="69a9396d0050dd24efcc1e16" />
-    <meta name="base:builder_code" content="bc_5s50punj" />
-    <title>Nexus Pay — Dashboard</title>
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <!-- Base.dev verification & attribution -->
+  <meta name="base:app_id" content="69a9396d0050dd24efcc1e16" />
+  <meta name="base:builder_code" content="bc_5s50punj" />
+  <title>Nexus Pay — Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
   <style>
@@ -46,7 +46,7 @@
     }
     .create-btn:hover { background: #fff; }
     main { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
-    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; margin-bottom: 40px; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2px; margin-bottom: 40px; }
     .stat { background: var(--surface); border: 1px solid var(--border); padding: 28px 24px; }
     .stat-label { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; }
     .stat-value { font-size: 32px; font-weight: 800; letter-spacing: -1.5px; }
@@ -143,17 +143,13 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  // ✅ TEMPO MAINNET CONFIG
   const TEMPO_CHAIN = {
-    chainId: '0x1079',         // 4217 decimal = Tempo Mainnet
+    chainId: '0x1079',
     chainName: 'Tempo Mainnet',
     nativeCurrency: { name: 'USD', symbol: 'USD', decimals: 18 },
     rpcUrls: ['https://rpc.tempo.xyz'],
     blockExplorerUrls: ['https://explore.tempo.xyz']
   };
-
-  // ✅ USDC on Tempo Mainnet (TIP-20 native USDC)
-  const USDC_ADDRESS = '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238';
 
   let invoices = JSON.parse(localStorage.getItem('nexuspay_invoices') || '[]');
   let connectedWallet = null;
@@ -166,7 +162,7 @@
       try {
         await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [TEMPO_CHAIN] });
         await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: TEMPO_CHAIN.chainId }] });
-      } catch(e) { console.log('Chain switch:', e.message); }
+      } catch(e) { console.log('Chain:', e.message); }
       document.getElementById('wallet-btn').textContent = 'Connected';
       document.getElementById('wallet-btn').classList.add('connected');
       const addrEl = document.getElementById('wallet-addr');
@@ -177,6 +173,20 @@
     } catch(e) { showToast('Failed: ' + e.message, true); }
   }
 
+  // ✅ Build shareable URL with all invoice data in params
+  function generatePayUrl(inv) {
+    const base = window.location.origin + '/pay.html';
+    const params = new URLSearchParams({
+      id: inv.id,
+      name: inv.name,
+      desc: inv.desc,
+      amount: inv.amount,
+      wallet: inv.wallet,
+      date: inv.date
+    });
+    return `${base}?${params.toString()}`;
+  }
+
   function createInvoice() {
     const name = document.getElementById('merchant-name').value.trim();
     const desc = document.getElementById('invoice-desc').value.trim();
@@ -184,13 +194,18 @@
     const wallet = document.getElementById('merchant-wallet').value.trim();
     if (!name || !desc || !amount || !wallet) { showToast('Fill all fields!', true); return; }
     const id = Math.random().toString(36).slice(2, 10).toUpperCase();
-    invoices.unshift({
+    const invoice = {
       id, name, desc, amount, wallet,
       status: 'pending',
       date: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),
       txHash: null
-    });
-    saveAndRender(); closeModal(); showToast('Payment link created!');
+    };
+    invoices.unshift(invoice);
+    saveAndRender();
+    closeModal();
+    // Auto-copy the shareable link
+    const url = generatePayUrl(invoice);
+    navigator.clipboard.writeText(url).then(() => showToast('✔ Link created & copied!')).catch(() => showToast('Link created!'));
     ['merchant-name','invoice-desc','invoice-amount','merchant-wallet'].forEach(i => document.getElementById(i).value = '');
   }
 
@@ -207,8 +222,8 @@
         <div class="card-desc">${inv.desc} &middot; ${inv.name}</div>
         ${inv.txHash ? `<div class="tx-hash">tx: <a href="https://explore.tempo.xyz/tx/${inv.txHash}" target="_blank">${inv.txHash.slice(0,20)}...</a></div>` : ''}
         <div class="card-actions">
-          <button class="btn-copy" onclick="copyLink('${inv.id}')">Copy Link</button>
-          <button class="btn-view" onclick="window.open('pay.html?id=${inv.id}','_blank')">Pay Page &#8599;</button>
+          <button class="btn-copy" onclick="copyInvoiceLink('${inv.id}')">Copy Link</button>
+          <button class="btn-view" onclick="openPayPage('${inv.id}')">Pay Page &#8599;</button>
         </div>
       </div>`).join('');
     const paid = invoices.filter(i => i.status === 'paid');
@@ -217,8 +232,19 @@
     document.getElementById('paid-count').textContent = paid.length;
   }
 
+  function copyInvoiceLink(id) {
+    const inv = invoices.find(i => i.id === id);
+    if (!inv) return;
+    navigator.clipboard.writeText(generatePayUrl(inv)).then(() => showToast('Link copied!'));
+  }
+
+  function openPayPage(id) {
+    const inv = invoices.find(i => i.id === id);
+    if (!inv) return;
+    window.open(generatePayUrl(inv), '_blank');
+  }
+
   function saveAndRender() { localStorage.setItem('nexuspay_invoices', JSON.stringify(invoices)); renderInvoices(); }
-  function copyLink(id) { navigator.clipboard.writeText(`${location.origin}/pay.html?id=${id}`).then(() => showToast('Link copied!')); }
   function openModal() { document.getElementById('modal').classList.add('show'); }
   function closeModal() { document.getElementById('modal').classList.remove('show'); }
   function showToast(msg, error=false) {
