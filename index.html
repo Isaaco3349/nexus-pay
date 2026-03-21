@@ -84,14 +84,13 @@
     .tx-hash { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--tempo); margin-top: 8px; word-break: break-all; }
     .tx-hash a { color: var(--tempo); text-decoration: none; }
     .tx-hash a:hover { text-decoration: underline; }
-    .check-status { font-family: 'Space Mono', monospace; font-size: 10px; margin-top: 8px; }
+    .check-status { font-family: 'Space Mono', monospace; font-size: 10px; margin-top: 8px; min-height: 16px; }
     .check-status.loading { color: var(--yellow); }
     .check-status.success { color: var(--green); }
     .check-status.error { color: var(--red); }
     .empty { grid-column: 1/-1; text-align: center; padding: 80px 24px; border: 1px dashed var(--border); }
     .empty-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; color: var(--muted); }
     .empty-sub { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--muted); }
-    /* MODAL */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(8,11,16,0.95); z-index: 200; align-items: center; justify-content: center; padding: 24px; }
     .modal-overlay.show { display: flex; }
     .modal { background: var(--surface); border: 1px solid var(--border); width: 100%; max-width: 480px; padding: 36px; }
@@ -179,6 +178,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
+  // ─── CHAIN CONFIGS ───────────────────────────────────────────────
   const TEMPO_CHAIN = {
     chainId: '0x1079',
     chainName: 'Tempo Mainnet',
@@ -187,17 +187,28 @@
     blockExplorerUrls: ['https://explore.tempo.xyz']
   };
 
-  // Explorer API endpoints for payment verification
+  // ✅ Explorer links (display only — no API calls)
   const EXPLORERS = {
-    tempo: { tx: 'https://explore.tempo.xyz/tx/', api: 'https://explore.tempo.xyz/api' },
-    base:  { tx: 'https://basescan.org/tx/',      api: 'https://api.basescan.org/api' },
-    arc:   { tx: 'https://testnet.arcscan.app/tx/', api: null }
+    tempo: { tx: 'https://explore.tempo.xyz/tx/' },
+    base:  { tx: 'https://basescan.org/tx/' },
+    arc:   { tx: 'https://testnet.arcscan.app/tx/' }
   };
+
+  // ✅ RPC endpoints + USDC contracts for on-chain verification
+  const CHAIN_RPCS = {
+    tempo: { rpc: 'https://rpc.tempo.xyz',           usdc: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238' },
+    base:  { rpc: 'https://mainnet.base.org',         usdc: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' },
+    arc:   { rpc: 'https://rpc.testnet.arc.network',  usdc: '0x3600000000000000000000000000000000000000' }
+  };
+
+  // ERC-20 Transfer event topic
+  const TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 
   let invoices = JSON.parse(localStorage.getItem('nexuspay_invoices') || '[]');
   let connectedWallet = null;
   let currentMarkInvoiceId = null;
 
+  // ─── CONNECT WALLET ──────────────────────────────────────────────
   async function connectWallet() {
     if (!window.ethereum) { showToast('Please install MetaMask!', true); return; }
     try {
@@ -217,20 +228,17 @@
     } catch(e) { showToast('Failed: ' + e.message, true); }
   }
 
-  // ✅ Build shareable URL with all invoice data in params
+  // ─── GENERATE SHAREABLE URL ──────────────────────────────────────
   function generatePayUrl(inv) {
     const base = window.location.origin + '/pay.html';
     const params = new URLSearchParams({
-      id: inv.id,
-      name: inv.name,
-      desc: inv.desc,
-      amount: inv.amount,
-      wallet: inv.wallet,
-      date: inv.date
+      id: inv.id, name: inv.name, desc: inv.desc,
+      amount: inv.amount, wallet: inv.wallet, date: inv.date
     });
     return `${base}?${params.toString()}`;
   }
 
+  // ─── CREATE INVOICE ──────────────────────────────────────────────
   function createInvoice() {
     const name = document.getElementById('merchant-name').value.trim();
     const desc = document.getElementById('invoice-desc').value.trim();
@@ -242,9 +250,7 @@
       id, name, desc, amount, wallet,
       status: 'pending',
       date: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),
-      txHash: null,
-      explorerTx: EXPLORERS.tempo.tx,
-      paidChain: null
+      txHash: null, explorerTx: EXPLORERS.tempo.tx, paidChain: null
     };
     invoices.unshift(invoice);
     saveAndRender();
@@ -254,62 +260,90 @@
     ['merchant-name','invoice-desc','invoice-amount','merchant-wallet'].forEach(i => document.getElementById(i).value = '');
   }
 
-  // ✅ Check payment on-chain via explorer API
+  // ─── ON-CHAIN PAYMENT CHECK VIA RPC (no CORS issues) ─────────────
+  async function checkChainForPayment(inv, chainName) {
+    const chain = CHAIN_RPCS[chainName];
+    // USDC has 6 decimals — convert amount to raw units
+    const amountRaw = Math.round(parseFloat(inv.amount) * 1_000_000);
+    const amountHex = amountRaw.toString(16).padStart(64, '0');
+    // Pad wallet address to 32 bytes for topic matching
+    const walletTopic = '0x000000000000000000000000' + inv.wallet.slice(2).toLowerCase();
+
+    try {
+      const body = {
+        jsonrpc: '2.0', id: 1,
+        method: 'eth_getLogs',
+        params: [{
+          address: chain.usdc,
+          topics: [TRANSFER_TOPIC, null, walletTopic],
+          fromBlock: 'earliest',
+          toBlock: 'latest'
+        }]
+      };
+      const res = await fetch(chain.rpc, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (data.result && data.result.length > 0) {
+        const match = data.result.find(log =>
+          log.data && log.data.toLowerCase().includes(amountHex.toLowerCase())
+        );
+        if (match) return match.transactionHash;
+      }
+    } catch(e) { console.log('RPC check error:', chainName, e.message); }
+    return null;
+  }
+
+  // ─── CHECK PAYMENT BUTTON ─────────────────────────────────────────
   async function checkPayment(id) {
     const inv = invoices.find(i => i.id === id);
     if (!inv || inv.status === 'paid') return;
-
     const statusEl = document.getElementById('check-status-' + id);
     statusEl.textContent = 'Checking on-chain...';
     statusEl.className = 'check-status loading';
-
-    try {
-      // Try Base explorer API first (most likely chain used)
-      const chains = ['base', 'tempo'];
-      let found = false;
-
-      for (const chain of chains) {
-        const explorer = EXPLORERS[chain];
-        if (!explorer.api) continue;
-
-        const amountInUnits = Math.round(parseFloat(inv.amount) * 1000000); // USDC 6 decimals
-        const url = `${explorer.api}?module=account&action=tokentx&address=${inv.wallet}&sort=desc&offset=10`;
-
-        try {
-          const res = await fetch(url);
-          const data = await res.json();
-
-          if (data.status === '1' && data.result) {
-            const match = data.result.find(tx =>
-              tx.to.toLowerCase() === inv.wallet.toLowerCase() &&
-              parseInt(tx.value) === amountInUnits
-            );
-
-            if (match) {
-              inv.status = 'paid';
-              inv.txHash = match.hash;
-              inv.explorerTx = explorer.tx;
-              inv.paidChain = chain;
-              saveAndRender();
-              showToast('✔ Payment verified on ' + chain.toUpperCase() + '!');
-              found = true;
-              break;
-            }
-          }
-        } catch(e) { console.log('Explorer API error:', e); }
+    let found = false;
+    for (const chainName of ['base', 'tempo', 'arc']) {
+      const txHash = await checkChainForPayment(inv, chainName);
+      if (txHash) {
+        inv.status = 'paid';
+        inv.txHash = txHash;
+        inv.explorerTx = EXPLORERS[chainName].tx;
+        inv.paidChain = chainName;
+        saveAndRender();
+        showToast('✔ Payment verified on ' + chainName.toUpperCase() + '!');
+        found = true;
+        break;
       }
-
-      if (!found) {
-        statusEl.textContent = 'No payment found yet — try again or mark manually';
-        statusEl.className = 'check-status error';
-      }
-    } catch(e) {
-      statusEl.textContent = 'Check failed — mark manually instead';
+    }
+    if (!found) {
+      statusEl.textContent = 'No payment found yet — try again or mark manually';
       statusEl.className = 'check-status error';
     }
   }
 
-  // ✅ Mark as paid manually with tx hash
+  // ─── AUTO-POLL EVERY 30 SECONDS ───────────────────────────────────
+  async function autoPollPendingInvoices() {
+    const pending = invoices.filter(i => i.status === 'pending');
+    if (!pending.length) return;
+    for (const inv of pending) {
+      for (const chainName of ['base', 'tempo', 'arc']) {
+        const txHash = await checkChainForPayment(inv, chainName);
+        if (txHash) {
+          inv.status = 'paid';
+          inv.txHash = txHash;
+          inv.explorerTx = EXPLORERS[chainName].tx;
+          inv.paidChain = chainName;
+          saveAndRender();
+          showToast('✔ Payment auto-detected on ' + chainName.toUpperCase() + '!');
+          break;
+        }
+      }
+    }
+  }
+
+  // ─── MARK AS PAID MODAL ───────────────────────────────────────────
   function openMarkModal(id) {
     currentMarkInvoiceId = id;
     document.getElementById('mark-txhash').value = '';
@@ -326,10 +360,8 @@
     const chain = document.getElementById('mark-chain').value;
     if (!txHash) { showToast('Enter a transaction hash!', true); return; }
     if (!txHash.startsWith('0x')) { showToast('Invalid tx hash — must start with 0x', true); return; }
-
     const inv = invoices.find(i => i.id === currentMarkInvoiceId);
     if (!inv) return;
-
     inv.status = 'paid';
     inv.txHash = txHash;
     inv.explorerTx = EXPLORERS[chain].tx;
@@ -338,45 +370,8 @@
     closeMarkModal();
     showToast('✔ Invoice marked as paid on ' + chain.toUpperCase() + '!');
   }
-// ✅ Auto-poll pending invoices every 30 seconds
-async function autoPollPendingInvoices() {
-  const pending = invoices.filter(i => i.status === 'pending');
-  if (!pending.length) return;
 
-  for (const inv of pending) {
-    const chains = ['base', 'tempo'];
-    for (const chain of chains) {
-      const explorer = EXPLORERS[chain];
-      if (!explorer.api) continue;
-      try {
-        const amountInUnits = Math.round(parseFloat(inv.amount) * 1000000);
-        const url = `${explorer.api}?module=account&action=tokentx&address=${inv.wallet}&sort=desc&offset=10`;
-        const res = await fetch(url);
-        const data = await res.json();
-        if (data.status === '1' && data.result) {
-          const match = data.result.find(tx =>
-            tx.to.toLowerCase() === inv.wallet.toLowerCase() &&
-            parseInt(tx.value) === amountInUnits
-          );
-          if (match) {
-            inv.status = 'paid';
-            inv.txHash = match.hash;
-            inv.explorerTx = explorer.tx;
-            inv.paidChain = chain;
-            saveAndRender();
-            showToast('✔ Payment auto-detected on ' + chain.toUpperCase() + '!');
-            break;
-          }
-        }
-      } catch(e) { console.log('Auto-poll error:', e); }
-    }
-  }
-}
-
-// Start auto-polling every 30 seconds
-setInterval(autoPollPendingInvoices, 30000);
-// Also run once immediately on load
-autoPollPendingInvoices();
+  // ─── RENDER INVOICES ──────────────────────────────────────────────
   function renderInvoices() {
     const grid = document.getElementById('invoices-grid');
     if (!invoices.length) {
@@ -442,8 +437,10 @@ autoPollPendingInvoices();
   }
 
   renderInvoices();
-  // Kick off auto-poll
-autoPollPendingInvoices();
+
+  // ✅ Start auto-polling every 30 seconds
+  setInterval(autoPollPendingInvoices, 30000);
+  autoPollPendingInvoices();
 </script>
 </body>
 </html>
