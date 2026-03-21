@@ -325,7 +325,7 @@
       'tx: <a href="' + cfg.explorerTx + txHash + '" target="_blank">' + txHash + '</a>';
     // Redirect back to dashboard after 4s
     setTimeout(() => {
-      window.location.href = '/index.html?paid=' + invoice.id + '&tx=' + txHash;
+      window.location.href = '/index.html?paid=' + invoice.id + '&tx=' + txHash + '&chain=' + selectedChain + '&explorer=' + encodeURIComponent(cfg.explorerTx);
     }, 4000);
   }
 

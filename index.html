@@ -220,7 +220,7 @@
         <div class="card-top"><span class="status-badge ${inv.status}">${inv.status}</span><span class="card-date">${inv.date}</span></div>
         <div class="card-amount">$${parseFloat(inv.amount).toFixed(2)}</div>
         <div class="card-desc">${inv.desc} &middot; ${inv.name}</div>
-        ${inv.txHash ? `<div class="tx-hash">tx: <a href="https://explore.tempo.xyz/tx/${inv.txHash}" target="_blank">${inv.txHash.slice(0,20)}...</a></div>` : ''}
+        ${inv.txHash ? `<div class="tx-hash">tx: <a href="${inv.explorerTx || 'https://explore.tempo.xyz/tx/'}${inv.txHash}" target="_blank">${inv.txHash.slice(0,20)}...</a></div>` : ''}
         <div class="card-actions">
           <button class="btn-copy" onclick="copyInvoiceLink('${inv.id}')">Copy Link</button>
           <button class="btn-view" onclick="openPayPage('${inv.id}')">Pay Page &#8599;</button>
@@ -257,7 +257,14 @@
   const p = new URLSearchParams(window.location.search);
   if (p.get('paid')) {
     const inv = invoices.find(i => i.id === p.get('paid'));
-    if (inv) { inv.status = 'paid'; inv.txHash = p.get('tx') || 'confirmed'; saveAndRender(); showToast('✔ Payment confirmed on Tempo Mainnet!'); }
+    if (inv) {
+      inv.status = 'paid';
+      inv.txHash = p.get('tx') || 'confirmed';
+      inv.explorerTx = decodeURIComponent(p.get('explorer') || 'https://explore.tempo.xyz/tx/');
+      inv.paidChain = p.get('chain') || 'tempo';
+      saveAndRender();
+      showToast('✔ Payment confirmed on ' + (p.get('chain') || 'Tempo').toUpperCase() + '!');
+    }
     history.replaceState({}, '', location.pathname);
   }
 
