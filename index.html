@@ -46,7 +46,7 @@
     }
     .create-btn:hover { background: #fff; }
     main { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
-    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2px; margin-bottom: 40px; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; margin-bottom: 40px; }
     .stat { background: var(--surface); border: 1px solid var(--border); padding: 28px 24px; }
     .stat-label { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 12px; }
     .stat-value { font-size: 32px; font-weight: 800; letter-spacing: -1.5px; }
@@ -68,18 +68,30 @@
     .card-date { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); }
     .card-amount { font-size: 32px; font-weight: 800; letter-spacing: -1.5px; margin-bottom: 4px; }
     .card-desc { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
-    .card-actions { display: flex; gap: 8px; }
-    .btn-copy, .btn-view { font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; padding: 8px 16px; cursor: pointer; transition: all 0.2s; border: 1px solid; }
+    .card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-copy, .btn-view, .btn-check, .btn-mark {
+      font-family: 'Space Mono', monospace; font-size: 10px; letter-spacing: 1px;
+      text-transform: uppercase; padding: 8px 16px; cursor: pointer; transition: all 0.2s; border: 1px solid;
+    }
     .btn-copy { background: transparent; color: var(--muted); border-color: var(--border); }
     .btn-copy:hover { border-color: var(--accent); color: var(--accent); }
     .btn-view { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
     .btn-view:hover { background: #fff; border-color: #fff; }
+    .btn-check { background: transparent; color: var(--yellow); border-color: var(--yellow); }
+    .btn-check:hover { background: var(--yellow); color: #000; }
+    .btn-mark { background: transparent; color: var(--green); border-color: var(--green); }
+    .btn-mark:hover { background: var(--green); color: #000; }
     .tx-hash { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--tempo); margin-top: 8px; word-break: break-all; }
     .tx-hash a { color: var(--tempo); text-decoration: none; }
     .tx-hash a:hover { text-decoration: underline; }
+    .check-status { font-family: 'Space Mono', monospace; font-size: 10px; margin-top: 8px; }
+    .check-status.loading { color: var(--yellow); }
+    .check-status.success { color: var(--green); }
+    .check-status.error { color: var(--red); }
     .empty { grid-column: 1/-1; text-align: center; padding: 80px 24px; border: 1px dashed var(--border); }
     .empty-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; color: var(--muted); }
     .empty-sub { font-family: 'Space Mono', monospace; font-size: 12px; color: var(--muted); }
+    /* MODAL */
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(8,11,16,0.95); z-index: 200; align-items: center; justify-content: center; padding: 24px; }
     .modal-overlay.show { display: flex; }
     .modal { background: var(--surface); border: 1px solid var(--border); width: 100%; max-width: 480px; padding: 36px; }
@@ -88,15 +100,18 @@
     .modal-close:hover { color: var(--text); }
     .form-group { margin-bottom: 20px; }
     label { display: block; font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
-    input { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: 'Space Mono', monospace; font-size: 13px; padding: 12px 16px; outline: none; transition: border-color 0.2s; }
-    input:focus { border-color: var(--accent); }
+    input, select { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: 'Space Mono', monospace; font-size: 13px; padding: 12px 16px; outline: none; transition: border-color 0.2s; }
+    input:focus, select:focus { border-color: var(--accent); }
     .amount-row { display: flex; }
     .currency-tag { background: var(--border); border: 1px solid var(--border); border-left: none; padding: 12px 16px; font-family: 'Space Mono', monospace; font-size: 11px; color: var(--accent); white-space: nowrap; }
     .submit-btn { width: 100%; background: var(--accent); color: #000; font-family: 'Space Mono', monospace; font-weight: 700; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; padding: 16px; border: none; cursor: pointer; margin-top: 8px; transition: all 0.2s; }
     .submit-btn:hover { background: #fff; }
+    .submit-btn.green { background: var(--green); }
+    .submit-btn.green:hover { background: #fff; }
     .toast { position: fixed; bottom: 32px; right: 32px; z-index: 300; background: var(--surface); border: 1px solid var(--green); color: var(--green); font-family: 'Space Mono', monospace; font-size: 12px; letter-spacing: 1px; padding: 14px 24px; transform: translateY(100px); opacity: 0; transition: all 0.3s; }
     .toast.show { transform: translateY(0); opacity: 1; }
     .toast.error { border-color: var(--red); color: var(--red); }
+    @media (max-width: 600px) { .stats { grid-template-columns: repeat(2, 1fr); } nav { padding: 12px 16px; } }
   </style>
 </head>
 <body>
@@ -126,7 +141,7 @@
   <div class="invoices" id="invoices-grid"></div>
 </main>
 
-<!-- MODAL -->
+<!-- CREATE INVOICE MODAL -->
 <div class="modal-overlay" id="modal">
   <div class="modal">
     <div class="modal-title">New Payment Link <button class="modal-close" onclick="closeModal()">&times;</button></div>
@@ -140,6 +155,27 @@
     <button class="submit-btn" onclick="createInvoice()">&#8594; Generate Payment Link</button>
   </div>
 </div>
+
+<!-- MARK AS PAID MODAL -->
+<div class="modal-overlay" id="mark-modal">
+  <div class="modal">
+    <div class="modal-title">Mark as Paid <button class="modal-close" onclick="closeMarkModal()">&times;</button></div>
+    <div class="form-group">
+      <label>Chain Used</label>
+      <select id="mark-chain">
+        <option value="tempo">Tempo Mainnet</option>
+        <option value="base">Base Mainnet</option>
+        <option value="arc">Arc Testnet</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Transaction Hash</label>
+      <input type="text" id="mark-txhash" placeholder="0x..."/>
+    </div>
+    <button class="submit-btn green" onclick="confirmMarkPaid()">&#10003; Confirm Payment</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -151,8 +187,16 @@
     blockExplorerUrls: ['https://explore.tempo.xyz']
   };
 
+  // Explorer API endpoints for payment verification
+  const EXPLORERS = {
+    tempo: { tx: 'https://explore.tempo.xyz/tx/', api: 'https://explore.tempo.xyz/api' },
+    base:  { tx: 'https://basescan.org/tx/',      api: 'https://api.basescan.org/api' },
+    arc:   { tx: 'https://testnet.arcscan.app/tx/', api: null }
+  };
+
   let invoices = JSON.parse(localStorage.getItem('nexuspay_invoices') || '[]');
   let connectedWallet = null;
+  let currentMarkInvoiceId = null;
 
   async function connectWallet() {
     if (!window.ethereum) { showToast('Please install MetaMask!', true); return; }
@@ -198,15 +242,101 @@
       id, name, desc, amount, wallet,
       status: 'pending',
       date: new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}),
-      txHash: null
+      txHash: null,
+      explorerTx: EXPLORERS.tempo.tx,
+      paidChain: null
     };
     invoices.unshift(invoice);
     saveAndRender();
     closeModal();
-    // Auto-copy the shareable link
     const url = generatePayUrl(invoice);
     navigator.clipboard.writeText(url).then(() => showToast('✔ Link created & copied!')).catch(() => showToast('Link created!'));
     ['merchant-name','invoice-desc','invoice-amount','merchant-wallet'].forEach(i => document.getElementById(i).value = '');
+  }
+
+  // ✅ Check payment on-chain via explorer API
+  async function checkPayment(id) {
+    const inv = invoices.find(i => i.id === id);
+    if (!inv || inv.status === 'paid') return;
+
+    const statusEl = document.getElementById('check-status-' + id);
+    statusEl.textContent = 'Checking on-chain...';
+    statusEl.className = 'check-status loading';
+
+    try {
+      // Try Base explorer API first (most likely chain used)
+      const chains = ['base', 'tempo'];
+      let found = false;
+
+      for (const chain of chains) {
+        const explorer = EXPLORERS[chain];
+        if (!explorer.api) continue;
+
+        const amountInUnits = Math.round(parseFloat(inv.amount) * 1000000); // USDC 6 decimals
+        const url = `${explorer.api}?module=account&action=tokentx&address=${inv.wallet}&sort=desc&offset=10`;
+
+        try {
+          const res = await fetch(url);
+          const data = await res.json();
+
+          if (data.status === '1' && data.result) {
+            const match = data.result.find(tx =>
+              tx.to.toLowerCase() === inv.wallet.toLowerCase() &&
+              parseInt(tx.value) === amountInUnits
+            );
+
+            if (match) {
+              inv.status = 'paid';
+              inv.txHash = match.hash;
+              inv.explorerTx = explorer.tx;
+              inv.paidChain = chain;
+              saveAndRender();
+              showToast('✔ Payment verified on ' + chain.toUpperCase() + '!');
+              found = true;
+              break;
+            }
+          }
+        } catch(e) { console.log('Explorer API error:', e); }
+      }
+
+      if (!found) {
+        statusEl.textContent = 'No payment found yet — try again or mark manually';
+        statusEl.className = 'check-status error';
+      }
+    } catch(e) {
+      statusEl.textContent = 'Check failed — mark manually instead';
+      statusEl.className = 'check-status error';
+    }
+  }
+
+  // ✅ Mark as paid manually with tx hash
+  function openMarkModal(id) {
+    currentMarkInvoiceId = id;
+    document.getElementById('mark-txhash').value = '';
+    document.getElementById('mark-modal').classList.add('show');
+  }
+
+  function closeMarkModal() {
+    document.getElementById('mark-modal').classList.remove('show');
+    currentMarkInvoiceId = null;
+  }
+
+  function confirmMarkPaid() {
+    const txHash = document.getElementById('mark-txhash').value.trim();
+    const chain = document.getElementById('mark-chain').value;
+    if (!txHash) { showToast('Enter a transaction hash!', true); return; }
+    if (!txHash.startsWith('0x')) { showToast('Invalid tx hash — must start with 0x', true); return; }
+
+    const inv = invoices.find(i => i.id === currentMarkInvoiceId);
+    if (!inv) return;
+
+    inv.status = 'paid';
+    inv.txHash = txHash;
+    inv.explorerTx = EXPLORERS[chain].tx;
+    inv.paidChain = chain;
+    saveAndRender();
+    closeMarkModal();
+    showToast('✔ Invoice marked as paid on ' + chain.toUpperCase() + '!');
   }
 
   function renderInvoices() {
@@ -220,10 +350,15 @@
         <div class="card-top"><span class="status-badge ${inv.status}">${inv.status}</span><span class="card-date">${inv.date}</span></div>
         <div class="card-amount">$${parseFloat(inv.amount).toFixed(2)}</div>
         <div class="card-desc">${inv.desc} &middot; ${inv.name}</div>
-        ${inv.txHash ? `<div class="tx-hash">tx: <a href="${inv.explorerTx || 'https://explore.tempo.xyz/tx/'}${inv.txHash}" target="_blank">${inv.txHash.slice(0,20)}...</a></div>` : ''}
+        ${inv.txHash ? `<div class="tx-hash">tx: <a href="${inv.explorerTx || EXPLORERS.tempo.tx}${inv.txHash}" target="_blank">${inv.txHash.slice(0,20)}...</a></div>` : ''}
+        ${inv.status === 'pending' ? `<div class="check-status" id="check-status-${inv.id}"></div>` : ''}
         <div class="card-actions">
           <button class="btn-copy" onclick="copyInvoiceLink('${inv.id}')">Copy Link</button>
           <button class="btn-view" onclick="openPayPage('${inv.id}')">Pay Page &#8599;</button>
+          ${inv.status === 'pending' ? `
+            <button class="btn-check" onclick="checkPayment('${inv.id}')">Check Payment</button>
+            <button class="btn-mark" onclick="openMarkModal('${inv.id}')">Mark Paid</button>
+          ` : ''}
         </div>
       </div>`).join('');
     const paid = invoices.filter(i => i.status === 'paid');
@@ -260,7 +395,7 @@
     if (inv) {
       inv.status = 'paid';
       inv.txHash = p.get('tx') || 'confirmed';
-      inv.explorerTx = decodeURIComponent(p.get('explorer') || 'https://explore.tempo.xyz/tx/');
+      inv.explorerTx = decodeURIComponent(p.get('explorer') || EXPLORERS.tempo.tx);
       inv.paidChain = p.get('chain') || 'tempo';
       saveAndRender();
       showToast('✔ Payment confirmed on ' + (p.get('chain') || 'Tempo').toUpperCase() + '!');
